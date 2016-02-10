@@ -1,19 +1,16 @@
-import rospy
-import tf
-import world_state
-import zlib
-
-from roslib import message
-
-import xmltodict
+import datetime
 import os
-import python_pcd
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from std_msgs.msg import Header
+
 import genpy
 import numpy as np
+import python_pcd
+import rospy
 import sensor_msgs.point_cloud2 as pc2
-import datetime
+import world_state
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from std_msgs.msg import Header
+
+from world_state_importer.src import xmltodict
 
 """
 read the G4S datasets load to

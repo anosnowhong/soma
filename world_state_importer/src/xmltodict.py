@@ -164,7 +164,7 @@ def parse(xml_input, encoding=None, expat=expat, process_namespaces=False,
 
     Simple example::
 
-        >>> import xmltodict
+        >>> from world_state_importer.src import xmltodict
         >>> doc = xmltodict.parse(\"\"\"
         ... <a prop="x">
         ...   <b>1</b>
