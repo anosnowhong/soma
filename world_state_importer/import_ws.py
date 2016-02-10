@@ -18,10 +18,12 @@ ws_observation collection()
 and object collection(including room object and the objects got from segmentation)
 """
 
+
 def get_number(s):
     """ return the number (int) in a string. uggly assumptions made """
     s = [c for c in s if c in "0123456789"]
     return "".join(s)
+
 
 def parse_room(world, dirname, files, class_lookup):
     files.sort()
@@ -205,6 +207,7 @@ def parse_room(world, dirname, files, class_lookup):
             print "Did not see ", obj, " this time..."
             world.get_object(obj).cut(time)
 
+
 def scan_dir(input_path, file_name, rooms):
     """
     scan through all the folders find the specified file name(*.xml),
@@ -221,6 +224,7 @@ def scan_dir(input_path, file_name, rooms):
                           datetime.datetime.strptime(room['SemanticRoom']['RoomLogStartTime'],
                                                      "%Y-%b-%d %H:%M:%S.%f")))
     return
+
 
 def scan_txt(input_path):
     """
@@ -253,12 +257,13 @@ def scan_txt(input_path):
                             object_dic[object_name] = object_name
     return object_dic
 
+
 if __name__ == '__main__':
 
-    #path to the data sets
+    # path to the data sets
     ROMBUS_DB = "/Volumes/BIG_ANOKK/strands_data_backup/20150505"
 
-    #scan all the labeled objects and put them in a dict
+    # scan all the labeled objects and put them in a dict
     class_lookup = scan_txt(ROMBUS_DB)
 
     rospy.init_node("data_importer", anonymous=True)
