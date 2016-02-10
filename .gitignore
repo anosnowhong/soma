@@ -1,6 +1,1 @@
-*~
-*pyc
-*BAK
-*.blend[12]
-*.bt
-*.ot
+.idea/*
