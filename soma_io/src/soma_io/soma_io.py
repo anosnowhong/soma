@@ -21,10 +21,12 @@ class FileIO(object):
 
     def __init__(self):
         # ros point cloud
+        # TODO: ros pointcloud2 also can be processed?
         self.pc2 = PointCloud2()
 
-    def load_pcd(self, path):
-        #TODO: can load ply file, for the soma mesh
+    @staticmethod
+    def load_pcd(path):
+        #TODO: load ply file, for the soma mesh
         """
         load point cloud form pcd file
         @param path: the whole path to the file
@@ -32,8 +34,8 @@ class FileIO(object):
         @return: the point cloud
         @rtype: pcl::PointCloud2
         """
-        self.pc2 = pcl.load(path)
-        return self.pc2
+        pc2 = pcl.load(path)
+        return pc2
 
     def save_pcd(self, point_cloud, path, _format=False):
         # TODO: can load ply file, for the soma mesh
@@ -41,7 +43,7 @@ class FileIO(object):
         pcl.save(point_cloud, path, _format)
 
     @staticmethod
-    def remove_nan(self, cloud_in, cloud_out):
+    def remove_nan(cloud_in, cloud_out):
         """
         remove the nan point in not dense point cloud
         :param cloud_in: input not dense point cloud
@@ -68,8 +70,10 @@ class FileIO(object):
 
         ndarray_cloud = np.asarray(list_cloud, dtype=np.float32)
         cloud_out.from_array(ndarray_cloud)
+        return
 
-    def pcd_to_octree(self, point_cloud, resolution=0.01, point=Point(0.0, 0.0, 0.0)):
+    @staticmethod
+    def pcd_to_octree(point_cloud, octree, resolution=0.01, point=Point(0.0, 0.0, 0.0)):
         # TODO: support ros pointcloud2
         """
         :param point_cloud: point cloud to translate
@@ -93,7 +97,7 @@ class FileIO(object):
             cloud_array = np.asarray(result, dtype=np.float64)
 
         # Generate Octree
-        tree = octomap.OcTree(resolution)
+        #tree = octomap.OcTree(resolution)
         if not point_cloud.is_dense == True:
             ndarray_cloud = cloud_array
         else:
@@ -101,22 +105,25 @@ class FileIO(object):
 
         # usually the point should be the position of camera
         sensor_origin = np.array([point.x, point.y, point.z])
-        tree.insertPointCloud(ndarray_cloud, sensor_origin)
-        self.tree = tree
-        return self.tree
+        octree.insertPointCloud(ndarray_cloud, sensor_origin)
+        return
 
-    def read_oct(self, path):
-        #TODO: use read?
+    @staticmethod
+    def read_oct(path):
+        # TODO: use read?
         tree = octomap.OcTree(path)
         return tree
 
-    def save_oct(self, path, octree, binary=True):
+    @staticmethod
+    def save_oct(path, octree, binary=True):
         if(binary):
             octree.writeBinary(path)
         else:
+            # ascii
             octree.write(path)
 
-    def scan_file(self, input_path, suffix):
+    @staticmethod
+    def scan_file(input_path, suffix):
         # a base scan method return a file list with specified suffix
         file_list = []
         for find_path, folders, files in os.walk(input_path):
@@ -368,7 +375,7 @@ class FileIO(object):
 
 if __name__ == "__main__":
 
-    ROMBUS_DB = "/Volumes/BIG_ANOKK/strands_data_backup/20150505"
+    ROMBUS_DB = "/Volumes/60G/strands_data_backup/20150505/patrol_run_10/room_6"
 
     eg = FileIO()
     eg.load_pcd("table.pcd")
