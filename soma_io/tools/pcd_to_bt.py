@@ -9,7 +9,7 @@ if __name__ == '__main__':
         print "search pcd file under given path: ", str(sys.argv[1])
         ROMBUS_DB = str(sys.argv[1])
     else:
-        ROMBUS_DB = "/Volumes/60G/strands_data_backup/20150505/patrol_run_10/room_6"
+        ROMBUS_DB = "/Volumes/60G/strands_data_backup/20150505/patrol_run_10/"
         print "Path not given, use default path instead: "
         print "======>", ROMBUS_DB
 

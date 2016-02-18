@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
-import roslib; roslib.load_manifest("soma_manager")
+import roslib
+from soma_io.state import Observation
+from soma_io.state import World
+
+roslib.load_manifest("soma_manager")
 import rospy
 from rospkg import RosPack
 import json
@@ -8,6 +12,7 @@ import argparse
 import random
 import copy
 import sys
+from soma_io.mongo import MongoConnection, MongoTransformable, MongoDocument
 
 from threading import Timer
 
@@ -50,6 +55,7 @@ def g_func(x):
 
 
 def b_func(x):
+
     a =  0.375
     b =  0.625
     c =  0.875
@@ -59,6 +65,174 @@ def b_func(x):
   
     value = trapezoidal_shaped_func(a,b,c,d,x)
     return value
+
+
+class Object(MongoDocument):
+    def __init__(self, mongo=None):
+        super(Object, self).__init__()
+        if mongo is not None:
+            # this will create the document live..
+            self._connect(mongo)
+        self._children = []
+        self._parent = None
+        self._bounding_box = None #BBoxArray(bbox)
+        self._observations = None
+
+        self._life_start = rospy.Time.now().to_time()
+        self._life_end = None
+
+        self.identifications = {}
+        self.identification = ObjectIdentification()
+
+        self._msg_store_objects =  [] # a list of object IDs (strings)
+
+        self._observations =  [] # a list of observation objects
+
+        self._poses = []
+        self._point_cloud = None # will be a MessageStoreObject or None
+        self._bounding_box = None
+
+        self._spans = [] # for storing life spans as tuples (start,end)
+
+    @property
+    def pose(self):
+        if len(self._poses) < 1:
+            raise StateException("NOPOSE")
+        return copy.deepcopy(self._poses[-1])
+
+    @property
+    def position(self):
+        if len(self._poses) < 1:
+            raise StateException("NOPOSE")
+        return copy.deepcopy(self._poses[-1].position)
+
+    @property
+    def quaternion(self):
+        if len(self._poses) < 1:
+            raise StateException("NOPOSE")
+        return copy.deepcopy(self._poses[-1].quaternion)
+
+    @property
+    def pose_homog_transform(self):
+        if len(self._poses) < 1:
+            raise StateException("NOPOSE")
+        return self._poses[-1].as_homog_matrix
+
+    def cut(self, stamp=None):
+        """
+        Marks the end of the life of this object, adding an entry for its life
+        span.
+        """
+        if self._life_end is not None:
+            return
+        if stamp is not None:
+            self._life_end = stamp
+        else:
+            self._life_end = rospy.Time.now().to_time()
+        self._spans.append((self._life_start, self._life_end))
+        self._spans = self._spans
+
+    def cut_all_children(self):
+        world =  World()
+        children = world.get_children(self.name, {'_life_end': None,})
+        for i in children:
+            i.cut()
+
+    def set_life_start(self, start):
+        self._life_start = start
+        self._life_end = None
+
+    @property
+    def name(self):
+        return self.key
+
+    @name.setter
+    def name(self, name):
+        # TODO: check doesn't already exist
+        self.key = name
+
+
+    def add_identification(self, classifier_id, identification):
+        if not self.identifications.has_key(classifier_id):
+            self.identifications[classifier_id] = []
+        # TODO check time consistency
+        self.identifications[classifier_id].append(identification)
+        self.identifications = self.identifications #force mongo update
+        # TODO: don't duplicate? include classifier_id?
+        self.identification = identification
+
+    def add_pose(self, pose):
+        # TODO check time consistency
+        p = copy.deepcopy(pose)
+        self._poses.append(p) #[str(p)] = p
+        self._poses = self._poses #force mongo update
+
+    def add_observation(self, observation):
+        assert isinstance(observation,  Observation)
+        self._observations.append(observation)
+        self._observations =  self._observations
+
+    def add_msg_store(self, message):
+        assert isinstance(message, MessageStoreObject)
+        self._msg_store_objects.append(message)
+        self._msg_store_objects = self._msg_store_objects
+
+    def get_identification(self, classifier_id=None):
+        if classifier_id is None:
+            return self.identification
+        return self.identifications[classifier_id][-1]
+
+    ##the value of _parent need to be decided
+    def get_parent(self):
+        world =  World()
+        ##FIX the error in unittest that can't find the object
+        ##self._parent = self.key
+
+        parent = world.get_object(self._parent)
+        return parent
+
+    ##usually, when remove a object we need find the parent a call remove child
+    def remove_child(self, child_name):
+        try:
+            self._children.remove(child_name)
+        except:
+            raise Exception("Trying to remove child from object, but"
+                            "parent object is not parent of this child.")
+
+    def get_children_names(self):
+        return copy.copy(self._children)
+
+    def add_child(self, child_object):
+        #self._children.append(child_object.get_name)
+        # have to recreate to catch in setattr
+        assert child_object._parent is None # otherwise dual parentage is ok?
+        child_object._parent = self.name
+        self._children+=[child_object.name]
+
+    def get_message_store_messages(self, typ=None):
+        msgs = []
+        proxy = MessageStoreProxy()
+        for msg in self._msg_store_objects:
+            if typ != msg.typ and typ is not None:
+                continue
+            proxy.database =  msg.database
+            proxy.collection =  msg.collection
+            msgs.append(proxy.query_id(msg.obj_id, msg.typ)[0])
+        return msgs
+
+    @classmethod
+    def _mongo_encode(cls, class_object):
+        doc = {}
+        doc.update(class_object.__dict__)
+        try:
+            doc.pop("_MongoDocument__mongo")
+            doc.pop("_MongoDocument__connected")
+        except KeyError:
+            print "Warning: no no no"
+        doc["__pyobject_class_type"] = class_object.get_pyoboject_class_string()
+        doc = copy.deepcopy(doc)
+        return doc
+
 
 
 class SOMAManager():
@@ -209,8 +383,6 @@ class SOMAManager():
         self._server.applyChanges()
 
     def add_object(self, soma_type, pose):
-        # todo: add to mongodb
-        
         soma_id = self._next_id()
 
         soma_obj = SOMAObject()
@@ -227,7 +399,7 @@ class SOMAManager():
         self._soma_obj_ids[soma_obj.id] = _id
         self._soma_obj_msg[soma_obj.id] = soma_obj
 
-        # add object to geospatial store
+        # add object to geo_spatial store
         self._gs_store.insert(self.geo_json_from_soma_obj(soma_obj))
         print "GS Store: added obj"
         
