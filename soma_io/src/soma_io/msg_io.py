@@ -1,6 +1,7 @@
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Transform
+from octomap_msgs.msg import Octomap
 
 import os
 
@@ -259,3 +260,50 @@ def read_pcd(filename, cloud_header=None, get_tf=True):
         return cloud, tf
     
     return cloud
+
+
+def write_bt():
+    pass
+
+def read_bt(filename):
+    if not os.path.isfile(filename):
+        raise Exception("[read_pcd] File does not exist.")
+
+    # Only the resolution & id & binary & data info is used in Octomap.msg
+    headers = [
+               ("size", int),
+               ("res", float)]
+
+    header={}
+    with open(filename, "r") as btfile:
+        # Skip the '#' comment
+        # miss the line of id but all the id are the same we can add it manually
+        while btfile.readline()[0] is "#":
+            continue
+
+        # start form the the line 5 (size defined here)
+        while len(headers) > 0:
+            line = btfile.readline()
+            if line =="":
+                raise Exception("[read_bt] EOF reached while looking for headers.")
+            f, v = line.split(" ", 1)
+            if f not in zip(*headers)[0]:
+                raise Exception("[read_bt] Field '{}' not known or duplicate.".format(f))
+            func = headers[zip(*headers)[0].index(f)][1]
+            header[f] = func(v)
+            headers.remove((f, func))
+
+        # Skip the data line
+        line = btfile.readline()
+        # read the left data
+        data = btfile.read()
+
+    # Create octomap message
+    oct = Octomap()
+    oct.header = None
+    oct.id = 'OcTree'
+    oct.binary = True
+    oct.resolution = header["res"]
+    oct.data = data
+
+    return oct

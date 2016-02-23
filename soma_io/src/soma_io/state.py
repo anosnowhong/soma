@@ -18,7 +18,6 @@ class Object(MongoDocument):
             self._connect(mongo)
         self._children = []
         self._parent = None
-        self._bounding_box = None #BBoxArray(bbox)
         self._observations = None
 
         self._life_start = rospy.Time.now().to_time()
@@ -96,7 +95,6 @@ class Object(MongoDocument):
     def name(self, name):
         # TODO: check doesn't already exist
         self.key = name
-
 
     def add_identification(self, classifier_id, identification):
         if not self.identifications.has_key(classifier_id):
@@ -192,7 +190,6 @@ class World(object):
     def __init__(self, database_name='world_state', server_host=None,
                  server_port=None):
         self._mongo = MongoConnection(database_name, server_host, server_port)
-
 
     def does_object_exist(self, object_name):
         result = self._mongo.database.Objects.find(

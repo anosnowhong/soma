@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from soma_io.soma_io import FileIO
 import sys
+from soma_io.soma_io import FileIO
 import octomap
 
 

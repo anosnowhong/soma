@@ -12,7 +12,7 @@ import xmltodict
 import identification
 import observation as ob
 import geometry
-import pcd_io
+import msg_io
 import octomap
 import pcl
 from octomap_msgs.msg import Octomap
@@ -263,16 +263,18 @@ class FileIO(object):
                 """
                 pcd_name = os.path.join(dirname,cloud_info['@filename']);
                 #cloud is ros point cloud2 type
-                cloud = pcd_io.read_pcd(pcd_name, get_tf=False)
+                cloud = msg_io.read_pcd(pcd_name, get_tf=False)
                 print "done."
                 #load octree data
                 # TODO: tmp solution for init octomap
 
                 print "Reading octomap BT..."
                 octree_name = pcd_name[:-3] + "bt"
+                octo_msg = msg_io.read_bt(octree_name)
                 #tmp_octree = octomap.OcTree(0.01)
                 #tmp_octree.readBinary(octree_name)
                 #data = tmp_octree.writeBinary()
+                """
                 octo_data=""
                 with open(octree_name) as f:
                     for i in xrange(6):
@@ -287,6 +289,7 @@ class FileIO(object):
                 octo_msg.header.frame_id = '/file_octomap'
                 octo_msg.resolution = 0.01
                 octo_msg.data = octo_data
+                """
                 print "done."
 
                 #octo_data = octomap.OcTree(octree_name)
@@ -392,7 +395,7 @@ class FileIO(object):
                     read the point cloud and calculate the object center
                     """
                     # TODO::use python-pcl api instead
-                    cloud = pcd_io.read_pcd(os.path.join(dirname, fl), get_tf=False)
+                    cloud = msg_io.read_pcd(os.path.join(dirname, fl), get_tf=False)
                     cloud.header = src_cloud.header
                     cent = np.array([0.0, 0.0, 0.0, 0.0])
                     cnt = 0
@@ -412,25 +415,3 @@ class FileIO(object):
             for obj in live_objects:
                 print "Did not see ", obj, " this time..."
                 world.get_object(obj).cut(time)
-
-
-if __name__ == "__main__":
-
-    ROMBUS_DB = "/Volumes/60G/strands_data_backup/20150505/patrol_run_10/room_6"
-
-    eg = FileIO()
-    eg.load_pcd("table.pcd")
-    pcd_list = eg.scan_file(ROMBUS_DB,"pcd")
-    eg.pc2_to_octree()
-
-#    tree = eg.pc2_to_octree(eg.pc2, 0.001)
-#
-#
-#    tree = octomap.OcTree(0.001)
-#    sensor_origin = np.array([0.0,0.0,0.0])
-#    pc_data = np.array([[1.0,0.0,0.0],
-#                         [0.0,1.0,1.0]])
-
-#    tree.insertPointCloud(numpy_cloud,sensor_origin)
-#    tree.writeBinary("soma_octree.bt")
-
