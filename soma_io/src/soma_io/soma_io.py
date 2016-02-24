@@ -255,41 +255,20 @@ class FileIO(object):
                 pose = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(),
                                                                    p1.as_homog_matrix()))
                 print "ok."
-                print "Reading cloud PCD..."
 
                 """
                 load point cloud from pcd file and add ros header for cloud.
                 load octomap from bt file, same name as point cloud file.
                 """
+                print "Reading cloud PCD..."
                 pcd_name = os.path.join(dirname,cloud_info['@filename']);
-                #cloud is ros point cloud2 type
                 cloud = msg_io.read_pcd(pcd_name, get_tf=False)
                 print "done."
-                #load octree data
-                # TODO: tmp solution for init octomap
 
+                #load octree data
                 print "Reading octomap BT..."
                 octree_name = pcd_name[:-3] + "bt"
                 octo_msg = msg_io.read_bt(octree_name)
-                #tmp_octree = octomap.OcTree(0.01)
-                #tmp_octree.readBinary(octree_name)
-                #data = tmp_octree.writeBinary()
-                """
-                octo_data=""
-                with open(octree_name) as f:
-                    for i in xrange(6):
-                        f.next()
-                    for line in f:
-                        octo_data += line
-                #f=open(octree_name,'r')
-                #octo_data = f.readlines()[7:]
-
-                octo_msg = Octomap()
-                octo_msg.binary = True
-                octo_msg.header.frame_id = '/file_octomap'
-                octo_msg.resolution = 0.01
-                octo_msg.data = octo_data
-                """
                 print "done."
 
                 #octo_data = octomap.OcTree(octree_name)

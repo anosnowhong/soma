@@ -4,9 +4,16 @@ project(soma_io)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+find_package(Boost REQUIRED COMPONENTS
+    system
+    thread
+    program_options
+    filesystem)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   rospy
+  roscpp
+  mongodb_store
 )
 
 ## System dependencies are found with CMake's conventions
@@ -127,16 +134,17 @@ include_directories(
 # add_dependencies(soma_io ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(soma_io_node src/soma_io_node.cpp)
+add_executable(octree_query_test test/octree_query.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(soma_io_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(soma_io_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(octree_query_test
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+)
 
 #############
 ## Install ##
