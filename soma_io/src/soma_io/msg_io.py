@@ -3,6 +3,7 @@ import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Transform
 from octomap_msgs.msg import Octomap
 
+import struct
 import os
 
 def datatype_to_size_type(datatype):
@@ -265,6 +266,11 @@ def read_pcd(filename, cloud_header=None, get_tf=True):
 def write_bt():
     pass
 
+
+def to_int8(data):
+    return struct.unpack(str(len(data))+'b', data[0:len(data)])
+
+
 def read_bt(filename, oct_header=None, get_tf=True):
     if not os.path.isfile(filename):
         raise Exception("[read_pcd] File does not exist.")
@@ -299,18 +305,20 @@ def read_bt(filename, oct_header=None, get_tf=True):
         data = btfile.read()
 
     # Create octomap message
+
     oct = Octomap()
-    #oct.header = None
     oct.id = 'OcTree'
-    oct.binary = True
+    oct.binary = True  # True for bt file (compact binary version)
     oct.resolution = header["res"]
-    oct.data = data
+    oct.data = to_int8(data)
+
     if oct_header is not None:
-        if(type(oct_header) is type(oct.header)):
+        if isinstance(oct_header,oct.header):
             oct.header = oct_header
         else:
-           raise Exception("Unknown Header type " + type(oct_header))
+            raise Exception("Unknown Header type " + type(oct_header))
     else:
         oct.header.frame_id = "/from_octomap_file"
 
     return oct
+

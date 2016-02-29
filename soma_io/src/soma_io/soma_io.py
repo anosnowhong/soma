@@ -261,7 +261,7 @@ class FileIO(object):
                 load octomap from bt file, same name as point cloud file.
                 """
                 print "Reading cloud PCD..."
-                pcd_name = os.path.join(dirname,cloud_info['@filename']);
+                pcd_name = os.path.join(dirname,cloud_info['@filename'])
                 cloud = msg_io.read_pcd(pcd_name, get_tf=False)
                 print "done."
 
