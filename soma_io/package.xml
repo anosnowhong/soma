@@ -51,8 +51,6 @@
   <run_depend>rospy</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>boost</run_depend>
-  <run_depend>mongodb</run_depend>
-  <run_depend>mongodb-dev</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

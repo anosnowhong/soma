@@ -1,30 +1,49 @@
 #!/usr/bin/env python
 import rospy
 import octomap
+from soma_io.octree import soma_octree
 
 from mongodb_store.message_store import MessageStoreProxy
 
+
 if __name__ == '__main__':
-    #connect to mongodb
+    # Setup Connection
     rospy.init_node("query_example")
-    msg_store = MessageStoreProxy(database='message_store',collection='observations')
+    msg_store = MessageStoreProxy(database='message_store',collection='ws_observations')
 
-    #messge_store api
-    oct_msg_list = msg_store.query_named('octomap_msgs/Octomap')
+    # Query Octree (messge_store api)
+    oct_msg_list = msg_store.query('octomap_msgs/Octomap')
 
-    #deserialise_message
+    # Deserialize message
+    # TODO: can't read the data directly form stream
+    # Load octree from binary octree and add some other info for the py-octomap read() API
+    # minimum requirement is oct_head, oct_data, oct_res, oct_data_keyword and oct_data_real_data
+    #for i in range(0,len(oct_msg_list)):
+    for i in range(0,2):
+        i=0
+        oct_template = '# Octomap OcTree binary file\n'
+        oct_template += 'id ' + oct_msg_list[i][0].id + '\n'
+        oct_template += 'res ' + str(oct_msg_list[i][0].resolution) + '\n'
+        oct_template += 'data\n'
+        oct_template += oct_msg_list[i][0].data
 
-    #load octree from binary octree
-    oct_head = '# Octomap OcTree binary file\n# (feel free to add / change comments, but leave the first line as it ' \
-               'is!)\n#\nid OcTree\nsize '+ oct_msg_list[][].+'\nres 0.01\ndata\n'
-    oct_data = octomap.OcTree(0.01)
-    oct_data.read()
-    oct_msg.data
+        # Load octree form query result
+        oct = soma_octree(oct_template)
+        print type(oct)
+        print oct.octree.size()
+        #oct.octree.readBinary(oct_template)
+        oct.get_bbx_info(oct.octree)
+        """
+        if oct.point_in_observation(oct.octree,10,9,8):
+            print 'point exist in observation ' + str(i)
+        else:
+            print 'point not in observation ' + str(i)
+        """
+
+    #octree = octomap.OcTree(oct_msg_list[i][0].resolution)
+    #octree.readBinary(oct_template)
 
 
-    #query octree
-
-    #load octree form query result
 
     #check if point is covered
 

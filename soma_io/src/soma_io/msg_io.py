@@ -265,7 +265,7 @@ def read_pcd(filename, cloud_header=None, get_tf=True):
 def write_bt():
     pass
 
-def read_bt(filename):
+def read_bt(filename, oct_header=None, get_tf=True):
     if not os.path.isfile(filename):
         raise Exception("[read_pcd] File does not exist.")
 
@@ -300,10 +300,17 @@ def read_bt(filename):
 
     # Create octomap message
     oct = Octomap()
-    oct.header = None
+    #oct.header = None
     oct.id = 'OcTree'
     oct.binary = True
     oct.resolution = header["res"]
     oct.data = data
+    if oct_header is not None:
+        if(type(oct_header) is type(oct.header)):
+            oct.header = oct_header
+        else:
+           raise Exception("Unknown Header type " + type(oct_header))
+    else:
+        oct.header.frame_id = "/from_octomap_file"
 
     return oct
