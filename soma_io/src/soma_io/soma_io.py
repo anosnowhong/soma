@@ -17,6 +17,7 @@ import octomap
 import pcl
 from octomap_msgs.msg import Octomap
 
+
 def get_number(s):
     """ return the number (int) in a string. uggly assumptions made """
     s = [c for c in s if c in "0123456789"]

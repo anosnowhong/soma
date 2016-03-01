@@ -9,11 +9,14 @@ find_package(Boost REQUIRED COMPONENTS
     thread
     program_options
     filesystem)
+find_package(PkgConfig)
+pkg_search_module(octomap REQUIRED octomap)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   rospy
   roscpp
   mongodb_store
+  octomap_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -144,6 +147,7 @@ add_executable(octree_query_test test/octree_query.cpp)
 target_link_libraries(octree_query_test
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+  ${octomap_LIBRARIES}
 )
 
 #############
