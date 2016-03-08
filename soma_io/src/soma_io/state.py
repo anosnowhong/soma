@@ -33,7 +33,7 @@ class Object(MongoDocument):
         self._poses = []
         self._point_cloud = None # will be a MessageStoreObject or None
         self._octree_cloud = None
-        self._bounding_box = None
+        self._bounding_box = []
 
         self._spans = [] # for storing life spans as tuples (start,end)
 
@@ -110,6 +110,11 @@ class Object(MongoDocument):
         p = copy.deepcopy(pose)
         self._poses.append(p) #[str(p)] = p
         self._poses = self._poses #force mongo update
+
+    def add_bbx(self, bbx):
+        bb = copy.deepcopy(bbx)
+        self._bounding_box.append(bb)
+        self._bounding_box = self._bounding_box
 
     def add_observation(self, observation):
         assert isinstance(observation,  Observation)
@@ -208,7 +213,6 @@ class World(object):
             raise Exception("get_object failed to find object '%s' in database."%object_name)
         ##return the first match
         found = result[0]
-        ##FIXME:??
         found._connect(self._mongo)
         return found
 

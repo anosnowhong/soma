@@ -48,6 +48,7 @@ add_message_files(
    FILES
    SOMAObject.msg
    SOMAROIObject.msg
+   PickledOctomap.msg
 )
 
 ## Generate services in the 'srv' folder

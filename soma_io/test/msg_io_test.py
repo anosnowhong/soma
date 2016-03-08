@@ -7,4 +7,4 @@ while x.readline()[0] is '#':
 
 for i in xrange(3):
     print x.readline()
-    f,v =  x.readline().split(' ', 1)
+    f, v = x.readline().split(' ', 1)

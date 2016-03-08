@@ -1,10 +1,17 @@
 from sensor_msgs.msg import PointCloud2, PointField
-import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Transform
 from octomap_msgs.msg import Octomap
+from mongodb_store.message_store import MessageStoreProxy
+from mongodb_store_msgs.msg import SerialisedMessage
+from soma_msgs.msg import PickledOctomap
 
+
+import sensor_msgs.point_cloud2 as pc2
+import cPickle as pickle
+import zlib
 import struct
 import os
+
 
 def datatype_to_size_type(datatype):
     """
@@ -35,6 +42,7 @@ def datatype_to_size_type(datatype):
 
     return s, t
 
+
 def size_type_to_datatype(size, type):
     """
     Given a .pcd size/type pair, return a sensor_msgs/PointField datatype
@@ -59,6 +67,7 @@ def size_type_to_datatype(size, type):
         if size == 4:
             return 6
     raise Exception("Unknown size/type pair in .pcd")
+
 
 def write_pcd(filename,  pointcloud, overwrite=False, viewpoint=None,
               mode='binary'):
@@ -182,6 +191,7 @@ def write_pcd(filename,  pointcloud, overwrite=False, viewpoint=None,
     except IOError,  e:
         raise Exception("Can't write to %s: %s" %  (filename, e.message))
 
+
 def read_pcd(filename, cloud_header=None, get_tf=True):
     if not os.path.isfile(filename):
         raise Exception("[read_pcd] File does not exist.")
@@ -213,7 +223,7 @@ def read_pcd(filename, cloud_header=None, get_tf=True):
             func =  headers[zip(*headers)[0].index(f)][1]
             header[f] = func(v)
             headers.remove((f, func))
-        data =  pcdfile.read()
+        data = pcdfile.read()
     # Check the number of points
     if header["VERSION"] != 0.7:
         raise Exception("[read_pcd] only PCD version 0.7 is understood.")
@@ -267,10 +277,6 @@ def write_bt():
     pass
 
 
-def to_int8(data):
-    return struct.unpack(str(len(data))+'b', data[0:len(data)])
-
-
 def read_bt(filename, oct_header=None, get_tf=True):
     if not os.path.isfile(filename):
         raise Exception("[read_pcd] File does not exist.")
@@ -290,7 +296,7 @@ def read_bt(filename, oct_header=None, get_tf=True):
         # start form the the line 5 (size defined here)
         while len(headers) > 0:
             line = btfile.readline()
-            if line =="":
+            if line == "":
                 raise Exception("[read_bt] EOF reached while looking for headers.")
             f, v = line.split(" ", 1)
             if f not in zip(*headers)[0]:
@@ -310,10 +316,13 @@ def read_bt(filename, oct_header=None, get_tf=True):
     oct.id = 'OcTree'
     oct.binary = True  # True for bt file (compact binary version)
     oct.resolution = header["res"]
-    oct.data = to_int8(data)
+    # transform data to int8
+    oct.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
+
+    print "octree data list size is "+str(len(oct.data))
 
     if oct_header is not None:
-        if isinstance(oct_header,oct.header):
+        if isinstance(oct_header, oct.header):
             oct.header = oct_header
         else:
             raise Exception("Unknown Header type " + type(oct_header))
@@ -321,4 +330,69 @@ def read_bt(filename, oct_header=None, get_tf=True):
         oct.header.frame_id = "/from_octomap_file"
 
     return oct
+
+
+def pickle_msg(input_msg):
+    if isinstance(input_msg, Octomap):
+        s = SerialisedMessage()
+        s.msg = zlib.compress(pickle.dumps(input_msg, protocol=pickle.HIGHEST_PROTOCOL))
+        s.type = 'pickled_octomap_msg'
+        return s
+    else:
+        raise Exception('unknown msg type')
+
+
+def pickle_msg_data(input_msg):
+    """
+    Only want to pickle the data field thus other info can be eassily access from robomongo
+    pickle the data field in ros message
+    :param input_msg: ros message
+    :return: only data field pickled message
+    """
+
+    if isinstance(input_msg, Octomap):
+        # Convert to PickledOctomap.msg (only change the data field)
+        pickled_oct = PickledOctomap()
+
+        pickled_oct.binary = input_msg.binary
+        pickled_oct.header = input_msg.header
+        pickled_oct.id = input_msg.id
+        pickled_oct.resolution = input_msg.resolution
+        pickled_oct.pickled_data = zlib.compress(pickle.dumps(input_msg.data, protocol=pickle.HIGHEST_PROTOCOL))
+
+        return pickled_oct
+    else:
+        raise Exception("input message object illegal, only support Octomap.msg and PointCloud2.msg")
+
+
+def unpickle(pickle_string):
+    return pickle.loads(zlib.decompress(pickle_string))
+
+
+class SOMAMsg(object):
+    """
+    manipulate the message processing, such as:
+    create message form file (support *.pcd *.bt files),
+    pickle and unpickle message when storing to DB or loading from DB,
+    """
+    def __init__(self, msg_obj):
+        # Load Msg
+        if msg_obj is not Octomap or PointCloud2:
+            raise Exception('unsupported msg type')
+        if msg_obj is Octomap:
+            self.octomap = msg_obj
+        if msg_obj is PointCloud2:
+            pass
+
+    def pickle(self):
+        return zlib.compress(pickle.dumps(self.octomap.data, protocol=pickle.HIGHEST_PROTOCOL))
+
+    def pickle_to_msg(self):
+        s = SerialisedMessage()
+        s.msg = pickle(self)
+        s.type = "zlibed_pickled_data"
+        return s
+
+
+
 

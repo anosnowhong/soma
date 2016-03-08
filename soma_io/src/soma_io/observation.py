@@ -51,7 +51,6 @@ class TransformationStore(object):
         for t in transforms:
             slf._transformations.append(t)
         return slf
-        
 
     @classmethod
     def create_live(cls, max_buffer=10.0):
@@ -75,7 +74,7 @@ class TransformationStore(object):
     
     def pickle_to_msg(self):
         s = SerialisedMessage()
-        s.msg =  self.pickle()
+        s.msg = self.pickle()
         s.type = "zlibed_pickled_tf"
         return s
     
@@ -90,7 +89,7 @@ class TransformationStore(object):
     @classmethod
     def unpickle(cls, pickle_string):
         return pickle.loads(zlib.decompress(pickle_string))
-        
+
 
 class MessageStoreObject(mongo.MongoTransformable):
     def __init__(self,  database="message_store", collection="message_store",

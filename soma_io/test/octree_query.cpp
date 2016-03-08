@@ -38,6 +38,7 @@ int main(int argc, char** argv)
     octomap::point3d min_p(min_x, min_y, min_z);
     octree->setBBXMax(max_p);
     octree->setBBXMin(min_p);
+    octree->writeBinary("output.bt");
 
     cout<<octree->getBBXBounds()<<endl;
     octomap::point3d test(1,0.94,3);

@@ -14,6 +14,7 @@ import observation as ob
 import geometry
 import msg_io
 import octomap
+import octree
 import pcl
 from octomap_msgs.msg import Octomap
 
@@ -29,7 +30,8 @@ class FileIO(object):
     def __init__(self):
         # ros point cloud
         # TODO: ros pointcloud2 also can be processed?
-        self.pc2 = PointCloud2()
+        # self.pc2 = PointCloud2()
+        pass
 
     @staticmethod
     def load_pcd(path):
@@ -44,6 +46,7 @@ class FileIO(object):
         pc2 = pcl.load(path)
         return pc2
 
+    @staticmethod
     def save_pcd(self, point_cloud, path, _format=False):
         # TODO: can load ply file, for the soma mesh
         # TODO: should accept multi point_cloud format, currently can only use pcl PointCloud2
@@ -139,6 +142,7 @@ class FileIO(object):
                     whole_file_path = os.path.join(find_path, a_file)
                     file_list.append(whole_file_path)
 
+        file_list.sort()
         return file_list
 
     @staticmethod
@@ -195,7 +199,46 @@ class FileIO(object):
         return rooms
 
     @staticmethod
-    def parse_room(world, dirname, files, class_lookup, OCTOMAP=False):
+    def get_xml_pose(xml_file, file_name):
+        """
+        get the pose of specified pcd file
+        :param xml_file:
+        :param file_name:
+        :return:
+        """
+        with open(xml_file, 'r') as xml:
+            room = xmltodict.parse(xml)
+
+        transform = None
+        for cloud_info in room['SemanticRoom']['RoomIntermediateClouds']['RoomIntermediateCloud']:
+            if str(cloud_info['@filename']) == file_name:
+                transform = cloud_info["RoomIntermediateCloudTransform"]
+                transform = PoseStamped(
+                    Header(0,
+                           genpy.Time(int(transform['Stamp']['sec']),
+                                      int(transform['Stamp']['nsec'])),
+                           transform["FrameId"]),
+                    Pose(Point(float(transform['Transform']['Translation']['x']),
+                               (transform['Transform']['Translation']['y']),
+                               float(transform['Transform']['Translation']['z'])),
+                         Quaternion(float(transform['Transform']['Rotation']['x']),
+                                    float(transform['Transform']['Rotation']['y']),
+                                    float(transform['Transform']['Rotation']['z']),
+                                    float(transform['Transform']['Rotation']['w']))))
+        if transform is None:
+            raise Exception("can't find the given file name in xml, name:", file_name)
+        return transform
+
+    def db_octree_bbx(self,):
+        # setup connection to database
+
+        # prepare the bbx info
+        # write into database
+        # close connection
+        pass
+
+    @staticmethod
+    def parse_room(world, dirname, files, class_lookup, pickle_octomap_data=True):
         files.sort()
         if "room.xml" in files:
             with open(os.path.join(dirname, "room.xml"), "r") as f:
@@ -299,12 +342,19 @@ class FileIO(object):
                 #insert zlib pickled tf message and point cloud to database
                 cloud_observation = ob.Observation.make_observation_from_messages(
                     [("/tf", transform_store.pickle_to_msg()),
-                     ("/head_xtion/depth_registered/points", cloud),
-                    ("/octree_topic", octo_msg)])
-                print "ok."
+                     ("/head_xtion/depth_registered/points", cloud)])
 
                 cloud_observation.stamp = time_stamp.to_time()
                 observations[get_number(cloud_info["@filename"])] = cloud_observation
+
+                if pickle_octomap_data is True:
+                    octo_observation = ob.Observation.make_observation_from_messages(
+                        [("/octree_topic", msg_io.pickle_msg_data(octo_msg))])
+                else:
+                    octo_observation = ob.Observation.make_observation_from_messages(
+                     [("/octree_topic", msg_io.pickle_msg(octo_msg))])
+                print "ok."
+
 
                 #add the new observation to this room_observation index in 'Object' collection
                 print "Adding room cloud observation to index..."
@@ -374,7 +424,6 @@ class FileIO(object):
                     """
                     read the point cloud and calculate the object center
                     """
-                    # TODO::use python-pcl api instead
                     cloud = msg_io.read_pcd(os.path.join(dirname, fl), get_tf=False)
                     cloud.header = src_cloud.header
                     cent = np.array([0.0, 0.0, 0.0, 0.0])
@@ -395,3 +444,7 @@ class FileIO(object):
             for obj in live_objects:
                 print "Did not see ", obj, " this time..."
                 world.get_object(obj).cut(time)
+
+
+class PCLBase(FileIO):
+    pass

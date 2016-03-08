@@ -1,15 +1,24 @@
 import octomap
 from geometry_msgs.msg import Pose
 
-class soma_octree(object):
 
-    def __init__(self, oct, res=0.01):
+class SOMAOctree(object):
+
+    def __init__(self, octr_path=None, res=0.01):
         # init octree and load data
         self.octree = octomap.OcTree(res)
-        print self.octree.readBinary(oct)
+        if octr_path is None:
+            return
+        if not self.octree.readBinary(octr_path):
+            raise Exception('failed when reading octomap binary file')
 
     def load_tree(self, input_path):
-        self.octree.readBinary(input_path)
+        """
+        Loading octree info.
+        :param input_path: the whole path of the octomap file
+        :return: BOOL return false if failed
+        """
+        return self.octree.readBinary(input_path)
 
     def tree_from_db(self,db_query_result):
         i=0
@@ -22,12 +31,22 @@ class soma_octree(object):
     def find_bbx(octree):
         pass
 
-    def get_bbx_info(self, octree):
-        print self.octree.getResolution()
-        print self.octree.getMetricMax()
-        print self.octree.getMetricMin()
-        print self.octree.getMetricSize()
-        print '===================='
+    @property
+    def bbx_info(self):
+        return self.get_bbx_info()
+
+    def get_bbx_info(self):
+        bbx = {'min': self.octree.getMetricMax(),
+               'max': self.octree.getMetricMin(),
+               'size': self.octree.getMetricSize()}
+        return bbx
+
+    @property
+    def transformed_bbx_info(self):
+        return self.get_bbx_info()
+
+    def get_transformed_bbx(self):
+        bbx = self.get_bbx_info()
 
     def point_in_observation(self, observe_tree, *args):
         _min = observe_tree.getMetricMax()
