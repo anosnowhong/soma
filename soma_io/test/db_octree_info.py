@@ -18,8 +18,8 @@ if __name__ == '__main__':
 
     bt_files = FileIO.scan_file(ROMBUS_DB, '.bt')
 
-    bbx_info_list = []
     for bt_file in bt_files:
+        bbx_info_list = []
         # load octomap data
         octr = SOMAOctree()
         if octr.load_tree(bt_file):
@@ -31,6 +31,7 @@ if __name__ == '__main__':
         file_name = bt_file[:-3]+'.pcd'
         xml_file = file_name[0:file_name.rfind('/')+1] + 'room.xml'
         file_name = file_name[file_name.rfind('/')+1:len(file_name)]
+        # only these octomap file are considered
         if not file_name.startswith('intermediate_'):
             continue
 

@@ -15,8 +15,10 @@ import geometry
 import msg_io
 import octomap
 import octree
+import soma_math
 import pcl
 from octomap_msgs.msg import Octomap
+from state import World
 
 
 def get_number(s):
@@ -119,20 +121,6 @@ class FileIO(object):
         return
 
     @staticmethod
-    def read_oct(path):
-        # TODO: use read?
-        tree = octomap.OcTree(path)
-        return tree
-
-    @staticmethod
-    def save_oct(path, octree, binary=True):
-        if(binary):
-            octree.writeBinary(path)
-        else:
-            # ascii
-            octree.write(path)
-
-    @staticmethod
     def scan_file(input_path, suffix):
         # a base scan method return a file list with specified suffix
         file_list = []
@@ -231,7 +219,6 @@ class FileIO(object):
 
     def db_octree_bbx(self,):
         # setup connection to database
-
         # prepare the bbx info
         # write into database
         # close connection
@@ -240,12 +227,13 @@ class FileIO(object):
     @staticmethod
     def parse_room(world, dirname, files, class_lookup, pickle_octomap_data=True):
         files.sort()
+        #oct_info_collection = World('octree_info')
         if "room.xml" in files:
             with open(os.path.join(dirname, "room.xml"), "r") as f:
                 room = xmltodict.parse(f)
             room_name = room['SemanticRoom']["RoomStringId"]
 
-            #Creat room object in world_state if it is the first time to store
+            # Create room object in world_state if it is the first time to store
             """
             room object should contain all the observation in this room
             """
@@ -305,18 +293,16 @@ class FileIO(object):
                 load octomap from bt file, same name as point cloud file.
                 """
                 print "Reading cloud PCD..."
-                pcd_name = os.path.join(dirname,cloud_info['@filename'])
+                pcd_name = os.path.join(dirname, cloud_info['@filename'])
                 cloud = msg_io.read_pcd(pcd_name, get_tf=False)
                 print "done."
 
-                #load octree data
+                # load octree data
                 print "Reading octomap BT..."
                 octree_name = pcd_name[:-3] + "bt"
                 octo_msg = msg_io.read_bt(octree_name)
                 print "done."
 
-                #octo_data = octomap.OcTree(octree_name)
-                #octree is another format of point cloud, so they share some info
                 """
                 generate a tf message 't'
                 define a Header for point cloud data
@@ -339,7 +325,7 @@ class FileIO(object):
                 observation is stored in 'world_state', it contains the index_id of the above two data.
                 e.g. in which database the topic is stored? which collection? what's the topic type? the identification?
                 """
-                #insert zlib pickled tf message and point cloud to database
+                # insert zlib pickled tf message, point cloud message to database
                 cloud_observation = ob.Observation.make_observation_from_messages(
                     [("/tf", transform_store.pickle_to_msg()),
                      ("/head_xtion/depth_registered/points", cloud)])
@@ -347,6 +333,7 @@ class FileIO(object):
                 cloud_observation.stamp = time_stamp.to_time()
                 observations[get_number(cloud_info["@filename"])] = cloud_observation
 
+                # insert zlib pickled octomap message
                 if pickle_octomap_data is True:
                     octo_observation = ob.Observation.make_observation_from_messages(
                         [("/octree_topic", msg_io.pickle_msg_data(octo_msg))])
@@ -355,16 +342,49 @@ class FileIO(object):
                      [("/octree_topic", msg_io.pickle_msg(octo_msg))])
                 print "ok."
 
-
-                #add the new observation to this room_observation index in 'Object' collection
+                # add the new observation to this room_observation index in 'Object' collection
                 print "Adding room cloud observation to index..."
                 room_object.add_observation(cloud_observation)
                 print "ok"
 
                 """
-                Prepare for sensor_msgs.PointCloud2 observation
+                create new collection to store extra Octree info
                 """
+                print "prepare for the transformed binding box information..."
+                # load octomap data
+                octr = octree.SOMAOctree()
+                if octr.load_tree(octree_name):
+                    bbx_info = octr.bbx_info
+                else:
+                    raise Exception('failed when loading octomap')
 
+                xml_file = os.path.join(dirname, "room.xml")
+                file_name = cloud_info["@filename"]
+                gl_pose = FileIO.get_xml_pose(xml_file, file_name)
+                rot_mat = soma_math.quaternion_to_matrix(gl_pose.pose.orientation)
+
+                max_p = np.dot(rot_mat, [[bbx_info['max'][0]], [bbx_info['max'][1]], [bbx_info['max'][2]]])
+                max_p[0] += float(gl_pose.pose.position.x)
+                max_p[1] += float(gl_pose.pose.position.y)
+                max_p[2] += float(gl_pose.pose.position.z)
+
+                min_p = np.dot(rot_mat, [[bbx_info['min'][0]], [bbx_info['min'][1]], [bbx_info['min'][2]]])
+                min_p[0] += float(gl_pose.pose.position.x)
+                min_p[1] += float(gl_pose.pose.position.y)
+                min_p[2] += float(gl_pose.pose.position.z)
+
+                bbx_info_list = []
+                bbx_info_list.append(list(bbx_info['max']))
+                bbx_info_list.append(list(bbx_info['min']))
+
+                for i in xrange(0, 3):
+                    bbx_info_list[0][i] = float(max_p[i])
+                    bbx_info_list[1][i] = float(min_p[i])
+
+                print "insert binding box information"
+                print id(room_object)
+                #print room_object.pose
+                room_object.add_bbx(bbx_info_list)
 
             # What objects are "live" in this room at this point in time
             """
@@ -445,6 +465,3 @@ class FileIO(object):
                 print "Did not see ", obj, " this time..."
                 world.get_object(obj).cut(time)
 
-
-class PCLBase(FileIO):
-    pass

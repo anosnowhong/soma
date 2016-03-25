@@ -2,6 +2,11 @@ from geometry_msgs.msg import Pose, Quaternion
 
 
 def quaternion_to_matrix(quaternion_msg):
+    """
+    Convert ROS quaternion_msg to 3 by 3 rotation matrix.
+    :param quaternion_msg:
+    :return:
+    """
     rot = []
     if isinstance(quaternion_msg, Quaternion):
         a11 = 1 - 2 * pow(quaternion_msg.y, 2) - 2 * pow(quaternion_msg.z, 2)

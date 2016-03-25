@@ -5,8 +5,11 @@ import numpy as np
 import importlib
 import rospy
 import copy
-
 import rospy
+
+"""
+A bridge to MongoDB, implement some method for manipulate and query database in ROS.
+"""
 
 def load_class(full_class_string):
     """
@@ -21,6 +24,34 @@ def load_class(full_class_string):
     # Finally, we retrieve the Class
     return getattr(module, class_str)
 
+
+def query_object(collection, query_doc, sort_query=[],find_one=False, limit=0):
+    if find_one:
+        ids=()
+        if sort_query:
+            result = collection.find_one(query_doc, sort=sort_query)
+        else:
+            result = collection.find_one(query_doc)
+        if result:
+            return [result]
+        else:
+            return []
+    else:
+        if sort_query:
+            return
+        else:
+            return [result for result in collection.find(query_doc).limit(limit)]
+
+def query_ob(manipulator):
+    if isinstance(manipulator, MongoConnection):
+        #manipulator.database.
+        manipulator.database.Objects.f
+    else:
+        raise Exception("Wrong input parameters")
+
+    pass
+
+
 class MongoConnection(object):
     def __init__(self, database_name="world_state", server=None, port=None):
         if server is None:
@@ -34,7 +65,9 @@ class MongoConnection(object):
         
         self.database.add_son_manipulator(NumpyTransformer())
         self.database.add_son_manipulator(MongoTransformer())
-        
+
+
+
 class MongoTransformer(pymongo.son_manipulator.SONManipulator):
     def __init__(self):
         pass
@@ -48,8 +81,6 @@ class MongoTransformer(pymongo.son_manipulator.SONManipulator):
                 son[key] = self.transform_incoming(value, collection)
         elif hasattr(son, "_mongo_encode"):
             son = self.transform_incoming(son._mongo_encode(son), collection)
-            
-            
         return son
     
     def transform_incoming_list(self, lst, collection):
@@ -151,7 +182,8 @@ class MongoDocument(Keyed, MongoTransformable):
         object.__setattr__(self, atr, v)
         if self.__connected:
             self.__mongo.database.Objects.save(self._mongo_encode(self))
-    
+
+
 class NumpyTransformer(pymongo.son_manipulator.SONManipulator):
     def transform_incoming(self, son, collection):
         for (key, value) in son.items():
@@ -193,4 +225,4 @@ class NumpyTransformer(pymongo.son_manipulator.SONManipulator):
     @staticmethod
     def _mongo_decode(mongo_document):
         return np.array(mongo_document["array"])
-    
+

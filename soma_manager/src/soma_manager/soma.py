@@ -90,7 +90,6 @@ class Object(MongoDocument):
 
         self._poses = []
         self._point_cloud = None # will be a MessageStoreObject or None
-        self._bounding_box = None
 
         self._spans = [] # for storing life spans as tuples (start,end)
 

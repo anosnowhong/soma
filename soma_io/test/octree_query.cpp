@@ -3,6 +3,7 @@
 #include <boost/foreach.hpp>
 #include <octomap_msgs/Octomap.h>
 #include <octomap/octomap.h>
+#include <soma_msgs/PickledOctomap.h>
 
 using namespace std;
 int main(int argc, char** argv)
@@ -11,15 +12,27 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "octree_query_test");
     ros::NodeHandle nh;
 
+    cout<<"connecting to DB..."<<endl;
     //setup connection to mongodb
     mongodb_store::MessageStoreProxy messageStore(nh, "ws_observations","message_store");
 
+    cout<<"looking for 'octomap_msgs::Octomap' type data..."<<endl;
     //query specify type and return all data that meet the requirement to vector
-    vector<boost::shared_ptr<octomap_msgs::Octomap> > results;
-    messageStore.query<octomap_msgs::Octomap>(results);
+    //vector<boost::shared_ptr<octomap_msgs::Octomap> > results;
+    vector<boost::shared_ptr<soma_msgs::PickledOctomap> > results;
+    //messageStore.query<octomap_msgs::Octomap>(results);
+    messageStore.query<soma_msgs::PickledOctomap>(results);
+    cout<<"found "<<results.size()<<" results"<<endl;
 
+    if (results.size()<=0)
+    {
+        cout<<"no result found, exit program..."<<endl;
+        exit(-1);
+    }
+    cout<<"loading octree data..."<<endl;
     //load data form msg in mongodb
-    octomap_msgs::Octomap msg;
+    //octomap_msgs::Octomap msg;
+    soma_msgs::PickledOctomap msg;
     msg = *results[0];
     octomap::OcTree* octree = new octomap::OcTree(msg.resolution);
     std::stringstream datastream;
@@ -28,6 +41,7 @@ int main(int argc, char** argv)
     octree->readBinaryData(datastream);
 
     //test bbx
+    cout<<"testing binding box..."<<endl;
     double max_x,max_y,max_z;
     double min_x,min_y,min_z;
     octree->getMetricMax(max_x,max_y,max_z);
@@ -44,13 +58,18 @@ int main(int argc, char** argv)
     octomap::point3d test(1,0.94,3);
     cout<<octree->inBBX(test)<<endl;
 
+    cout<<"boost usage example ..."<<endl;
     //check for if point is convered by observation
     octomap::point3d query_point(1,0.84,3);
-    BOOST_FOREACH(boost::shared_ptr<octomap_msgs::Octomap> oct, results)
+    //BOOST_FOREACH(boost::shared_ptr<octomap_msgs::Octomap> oct, results)
+    BOOST_FOREACH(boost::shared_ptr<soma_msgs::PickledOctomap> oct, results)
     {
         octomap::OcTree* checker = new octomap::OcTree(oct->resolution);
+
         std::stringstream datastream;
-        assert(oct->data.size()>0);
+        //assert(oct->data.size()>0);
+        assert(oct->pickled_data.size()>0);
+        //datastream.write((const char*) &oct->data[0], oct->data.size());
         datastream.write((const char*) &oct->data[0], oct->data.size());
         checker->readBinaryData(datastream);
         checker->getMetricMax(max_x, max_y, max_z);

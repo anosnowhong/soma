@@ -278,6 +278,13 @@ def write_bt():
 
 
 def read_bt(filename, oct_header=None, get_tf=True):
+    """
+    Transfrom bt file to octomap_msgs::Octomap message
+    :param filename: path to bt file
+    :param oct_header:
+    :param get_tf:
+    :return: the Octomap message
+    """
     if not os.path.isfile(filename):
         raise Exception("[read_pcd] File does not exist.")
 
@@ -311,7 +318,6 @@ def read_bt(filename, oct_header=None, get_tf=True):
         data = btfile.read()
 
     # Create octomap message
-
     oct = Octomap()
     oct.id = 'OcTree'
     oct.binary = True  # True for bt file (compact binary version)

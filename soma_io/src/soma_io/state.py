@@ -7,8 +7,8 @@ from geometry import Pose
 from identification import ObjectIdentification
 from observation import Observation,  MessageStoreObject
 from exceptions import StateException
-
 from mongodb_store.message_store import MessageStoreProxy
+
 
 class Object(MongoDocument):
     def __init__(self, mongo=None):
@@ -113,6 +113,7 @@ class Object(MongoDocument):
 
     def add_bbx(self, bbx):
         bb = copy.deepcopy(bbx)
+        print bb
         self._bounding_box.append(bb)
         self._bounding_box = self._bounding_box
 
@@ -260,7 +261,6 @@ class World(object):
         """
         return self.get_children(None)
 
-
     def get_children(self, parent, condition=None):
         """ Get the actual children objects given the condition """
         q = {'_parent': parent,
@@ -273,3 +273,17 @@ class World(object):
             r._connect(self._mongo)
             objs.append(r)
         return objs
+
+    def query_object(self, field, field_content):
+        """
+        Query in the 'Objects' collection
+        :param field: query field
+        :param field_content: field content
+        :return: pymongo.cursor.Cursor
+        """
+        if field is None:
+            return self._mongo.database.Objects.find({})
+        elif field_content is not None:
+            return self._mongo.database.Objects.find({field:field_content})
+        else:
+            return self._mongo.database.Objects.find({field})
