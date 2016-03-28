@@ -105,5 +105,3 @@ class ObjectMaster(object):
              "_category": category.name,},
             {"_name": 1,})
         return [i["_name"] for i in instances]
-    
-    

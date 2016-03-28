@@ -572,7 +572,6 @@ class SOMAROIManager():
 if __name__=="__main__":
 
     # TODO: add list command
-    
     parser = argparse.ArgumentParser(prog='soma_roi.py')
     parser.add_argument("map", nargs=1, help='Name of the used 2D map')
     parser.add_argument("conf", nargs=1, help='Name of the object configuration')

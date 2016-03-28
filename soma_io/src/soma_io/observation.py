@@ -11,16 +11,14 @@ from mongodb_store.message_store import MessageStoreProxy
 from mongodb_store_msgs.msg import SerialisedMessage
 from exceptions import StateException
 
-"""
 DEFAULT_TOPICS = [("/amcl_pose", PoseWithCovarianceStamped),
                   ("/head_xtion/rgb/image_color", Image),
                   ("/head_xtion/rgb/camera_info", CameraInfo), 
                   ("/head_xtion/depth/points", PointCloud2),
                   ("/head_xtion/depth/camera_info", CameraInfo),
                   ("/ptu/state", JointState)]
-"""
 
-DEFAULT_TOPICS = [("/amcl_pose", PoseWithCovarianceStamped)]
+#DEFAULT_TOPICS = [("/amcl_pose", PoseWithCovarianceStamped)]
 class TransformationStore(object):
     """
     Subscribes to /TF, stores transforms, pickleable for datacentre, turns into

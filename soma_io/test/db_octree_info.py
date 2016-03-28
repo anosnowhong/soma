@@ -8,7 +8,6 @@ import numpy as np
 
 
 if __name__ == '__main__':
-    #ROMBUS_DB = "/home/hongru/20140820/patrol_run_2/room_0"
     ROMBUS_DB = "/media/psf/strands_data_backup/20150505/patrol_run_10/room_6"
     object_classes = FileIO.scan_objects(ROMBUS_DB)
 

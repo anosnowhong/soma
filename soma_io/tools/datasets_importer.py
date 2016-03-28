@@ -6,7 +6,7 @@ from soma_io.soma_io import FileIO
 from soma_io.state import World
 
 """
-Inport all the data to mongodb, works for G4S dataset.
+Import all the data to mongodb, works for G4S dataset.
 The information that are imported are listed below:
 /tf
 /pcl
@@ -44,7 +44,7 @@ if __name__ == '__main__':
         print "Done!"
         exit()
     elif args.m == 'online':
-	print args.u
+        print args.u
         rospy.init_node("online_data_importer", anonymous=True)
         pass
     else:

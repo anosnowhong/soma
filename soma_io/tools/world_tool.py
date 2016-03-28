@@ -1,20 +1,23 @@
 #!/usr/bin/env python
 import rospy
 import argparse
-import argparse
 import sys
-from soma_io.soma_io import FileIO
 from soma_io.state import World
 from mongodb_store.message_store import MessageStoreProxy
+from geometry_msgs.msg import PointStamped, Point
 
 """
-A Query tool that can handle the MessageStore message and normal DB data.
+A Query tool that can handle the query task of MessageStore message and normal DB data.
 usage example:
 ```
 #Query 'room' Object instance
 $world_tool.py -q key:WayPoint42
+#Multi query commands
+$world_tool.py -q key:bin2,_parent:WayPoint42
 #Query how much observations in a room that covers the point
-$world_tool.py -r WayPoint42 -p 28,22,1
+$world_tool.py -r WayPoint42 -p 22,24,1
+#Query how much observations in a room that record in database
+$world_tool.py -r WayPoint42
 ```
 """
 
@@ -22,17 +25,20 @@ if __name__ == '__main__':
     # Prepare parameters
     parser = argparse.ArgumentParser(prog='world_tool.py')
     parser.add_argument("-dbpath", metavar='database address and port number',
-                        help="format: database_address:port_number")
+                        help="format: database_address:port_number, default: localhost:62345")
     parser.add_argument("-q", metavar='query content',
-                        help="same as mongodb query input: field:field_content")
+                        help="query commands: field1:field_content1,field2:field_content2...")
     parser.add_argument("-r", metavar='room string',
                         help="query options to specify a room")
     parser.add_argument("-p", metavar='a query point to check which observations covers this point',
                         help="example: -p 1.0,2.0,3.0 the order is x,y,z")
+    parser.add_argument("-obj", metavar='find the given object name in database',
+                        help="example: -obj bin1")
+
     args = parser.parse_args(rospy.myargv(argv=sys.argv)[1:])
 
     # Setup Connection
-    rospy.init_node("query_tools")
+    rospy.init_node("world_tools")
     if args.dbpath is None:
         print "No database specified, trying to connection to default database..."
         # handle world_state database
@@ -46,41 +52,34 @@ if __name__ == '__main__':
 
     # Query
     if args.q is not None:
-        if args.r is None:
-            room_str = "room not specified"
-        else:
-            room_str = args.r
-        print "Receive query task: " + args.q + ", " + room_str
-        field, field_content = args.q.split(':')
-        result = world.query_object(field, field_content)
-        print "Got "+ str(result.count()) + "  results"
+        print "Receive normal query task: " + args.q
+        result = world.query_normal(args.q)
+        print "Got " + str(result.count()) + "  results"
 
-    # Query Point
+    # Query how much observations covered a given Point
     if args.p is not None:
         if args.r is None:
-            room_str = "room not specified"
+            room_str = "not specified"
         else:
             room_str = args.r
 
         _x, _y, _z = args.p.split(',')
-        _x=float(_x)
-        _y=float(_y)
-        _z=float(_z)
-        result = world.query_object("key", room_str)
+        query_p = Point()
+        query_p.x = _x = float(_x)
+        query_p.y = _y = float(_y)
+        query_p.z = _z = float(_z)
+        print "Checking coverd observations in " + room_str + " room "
+        print "Point: (" + str(query_p.x) + "," + str(query_p.y) + "," + str(query_p.z) + ")"
+        result = world.query_point(query_p, room_str)
 
         # As a room is unique in the database, so result can only be 0 or 1
-        if result.count() == 1:
-            print "Got " + str(len(result[0]._bounding_box)) + " bounding box in room " + room_str
-            bbx_list = result[0]._bounding_box
-            obs_list = result[0]._observations
-        else:
+        if result is False:
             print "No result found!"
+            exit()
+        print "Got " + str(len(result)) + " observations that match the condition"
 
-        print "Checking coverd observations..."
-        reflection = 0
-        for th in bbx_list:
-            if _x < th[0][0] and _y < th[0][1] and _z < th[0][2] and _x > th[1][0] and _y > th[1][1] and _z > th[1][2]:
-                print "Observation at time " + str(obs_list[reflection].stamp) + " covered query point!"
-            else:
-                print "not in Observation at time " + str(obs_list[reflection].stamp)
-            reflection += 1
+    # Query how much observations has been done in the given room id
+    if args.p is None and args.q is None and args.r is not None:
+        print "searching observasions amount in a room..."
+        result = world.query_room(args.r)
+        print "Got " + str(len(result)) + " Observations in room " + args.r

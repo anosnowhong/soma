@@ -8,6 +8,7 @@ from identification import ObjectIdentification
 from observation import Observation,  MessageStoreObject
 from exceptions import StateException
 from mongodb_store.message_store import MessageStoreProxy
+from geometry_msgs.msg import PointStamped, Point
 
 
 class Object(MongoDocument):
@@ -192,11 +193,13 @@ class World(object):
     such as check existence,
     create object and insert to a collection,
     delete object in a collection
+    and query options
     """
     def __init__(self, database_name='world_state', server_host=None,
                  server_port=None):
         self._mongo = MongoConnection(database_name, server_host, server_port)
 
+    #TODO: This can't handle the situation when two same object exist in two different room
     def does_object_exist(self, object_name):
         result = self._mongo.database.Objects.find(
             {"__pyobject_class_type": Object.get_pyoboject_class_string(),
@@ -274,16 +277,95 @@ class World(object):
             objs.append(r)
         return objs
 
-    def query_object(self, field, field_content):
+    def query_normal(self, options, collection='Objects'):
         """
-        Query in the 'Objects' collection
-        :param field: query field
-        :param field_content: field content
-        :return: pymongo.cursor.Cursor
+        Execute the normal query commands
+        :param options: should be a string, then convert to dic in this function
+        :param collection: collection name, default is Objects
+        :return:
         """
-        if field is None:
-            return self._mongo.database.Objects.find({})
-        elif field_content is not None:
-            return self._mongo.database.Objects.find({field:field_content})
+        key = []
+        val = []
+        if isinstance(options, str):
+            commands = options.split(',')
+        for com in commands:
+            tmp_key, tmp_val = com.split(':')
+            key.append(tmp_key)
+            val.append(tmp_val)
+        commands = dict(zip(key, val))
+
+        return self._mongo.database[collection].find(commands)
+
+    def query_room(self, room_id):
+        """
+        Query how many observations in a room
+        :param room_id: the name of the room where robot made observations, if not given will retrieve all the observations
+        :return: False when no result found, else return a pymongo cursor
+        """
+        result = self._mongo.database.Objects.find({"key": room_id})
+        if result.count() == 0:
+            return False
+        elif result.count() > 1:
+            print "Error:Multi room with same name found, should be only one room!"
+            return False
         else:
-            return self._mongo.database.Objects.find({field})
+            obs_list = result[0]._observations
+            return obs_list
+
+    def query_object(self, obj_id, room_id=None):
+        """
+        Query a object in all the observations,
+        this can return multi result when different contains same object
+        :param obj_id: object name
+        :param room_id: the name of the room where robot made observations, if not given will retrieve all the observations
+        :return: False when no result found, else return a cursor object(pymongo cursor list)
+        """
+        if room_id is None:
+            return self._mongo.database.Objects.find({"key": obj_id})
+        else:
+            r = self._mongo.database.Objects.find({"key": obj_id, "_parent": room_id})
+            if r.count() == 0:
+                return False
+            else:
+                return r[0]
+
+    def query_point(self, point, room_id=None):
+        """
+        Query a point and return a list of observations that cover the point
+        :param point: a three axis coordinate of a point
+        :param room_id: the name of the room where robot made observations, if not given will retrieve all the observations
+        :return: False when no result found, else return a observation list (pymongo cursor list)
+        """
+        if room_id is not None:
+            cursor = self._mongo.database.Objects.find({"key": room_id})
+        else:
+            cursor = self._mongo.database.Objects.find({})
+        if cursor.count() == 0:
+            return False
+        elif cursor.count() > 1:
+            print "Error:Multi room with same name found, should be only one room!"
+
+        q_point = Point()
+        if isinstance(point, PointStamped):
+            q_point.x = point.point.x
+            q_point.y = point.point.y
+            q_point.z = point.point.z
+        elif isinstance(point, Point):
+            q_point.x = point.x
+            q_point.y = point.y
+            q_point.z = point.z
+        else:
+            raise Exception("Unknow Point Type.")
+
+        obs_list = []
+        reflection = 0
+        for bbx in cursor[0]._bounding_box:
+            if bbx[0][0] > q_point.x and bbx[0][1] > q_point.y and bbx[0][2] > q_point.z \
+                    and bbx[1][0] < q_point.x and bbx[1][1] < q_point.y and bbx[1][2] < q_point.z:
+                obs_list.append(cursor[0]._observations[reflection])
+            reflection += 1
+
+        if len(obs_list) == 0:
+            print "No observations covers the given point, end task."
+            return False
+        return obs_list
