@@ -3,6 +3,7 @@ import rospy
 import argparse
 import sys
 from soma_io.soma_io import FileIO
+from soma_io.soma_io import Importer
 from soma_io.state import World
 
 from sensor_msgs.msg import PointCloud2
@@ -49,8 +50,11 @@ if __name__ == '__main__':
         if args.t is None:
             print "error: need topic name for online mode"
             exit()
-        rospy.init_node("online_data_importer", anonymous=True)
-        rospy.Subscriber(args.t, PointCloud2, FileIO.online_mode)
-        rospy.spin()
+        #rospy.init_node("online_data_importer", anonymous=True)
+        #rospy.Subscriber(args.t, PointCloud2, FileIO.online_mode)
+        #rospy.spin()
+        imp = Importer(args.t)
+        imp.init_subscriber('/narrow_stereo_link', 'head_pan_link', '/odom_combined')
+
     else:
          print("Unknown options detected, use -h for usage info")
