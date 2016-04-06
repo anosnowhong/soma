@@ -20,7 +20,7 @@ import soma_math
 import pcl
 from octomap_msgs.msg import Octomap
 import sensor_msgs.point_cloud2 as pypc2
-from state import World
+import tf
 
 
 def get_number(s):
@@ -28,6 +28,114 @@ def get_number(s):
     s = [c for c in s if c in "0123456789"]
     return "".join(s)
 
+
+class Importer(object):
+    def __init__(self, pc2_topic):
+        rospy.init_node('importer_node')
+        # need specify the point cloud topic to run the importer
+        self.pc2_topic = pc2_topic
+        self.tf_listener = tf.TransformListener()
+        self.frame_robot= self.frame_sensor= None
+        self.frame_global = None
+
+    def init_subscriber(self, frame_1, frame_2, frame_3):
+        """
+        init ROS topics to subscribe, also init the transform frame here.
+        :param frame_1: robot_frame
+        :param frame_2: point cloud sensor_frame
+        :param frame_3: global_frame
+        :return:
+        """
+        self.frame_robot = frame_1
+        self.frame_sensor = frame_2
+        self.frame_global = frame_3
+        rospy.Subscriber(self.pc2_topic, PointCloud2, self.online_mode)
+        rospy.spin()
+
+    def online_mode(self, pc2_data):
+        """
+        The online mode should subscribe a topic which publishes the observation data periodically.
+        These observation data are considered to store in the database, so it shouldn't subscribe
+        to a topic that publishes data constantly.
+        :param pc2_data: the point cloud data to be stored, PointCloud2 type.
+        :return:
+        """
+        try:
+            # Transformation from sensor to robot
+            trans1, rot1 = self.tf_listener.lookupTransform(self.frame_robot, self.frame_sensor,
+                                                            rospy.Time(pc2_data.header.stamp.secs,
+                                                                       pc2_data.header.stamp.nsecs))
+            # Transformation from robot to global frame
+            trans2, rot2 = self.tf_listener.lookupTransform(self.frame_global, self.frame_robot,
+                                                            rospy.Time(pc2_data.header.stamp.secs,
+                                                                       pc2_data.header.stamp.nsecs))
+        except tf.ConnectivityException:
+            print "***connection problem occurs..."
+            return
+        except tf.LookupException:
+            print "***encounter problem when look up transformaion in tf tree..."
+            return
+        except tf.ExtrapolationException:
+            print "***extrapolation problem..."
+            return
+
+        # reconstruct a single tf message for the two frames
+        pose1 = pose2 = PoseStamped()
+        pose1.pose.position.x = trans1[0]
+        pose1.pose.position.y = trans1[1]
+        pose1.pose.position.z = trans1[2]
+        pose2.pose.position.x = trans2[0]
+        pose2.pose.position.y = trans2[1]
+        pose2.pose.position.z = trans2[2]
+
+        pose1.pose.orientation.x = rot1[0]
+        pose1.pose.orientation.y = rot1[1]
+        pose1.pose.orientation.z = rot1[2]
+        pose1.pose.orientation.w = rot1[3]
+        pose2.pose.orientation.x = rot2[0]
+        pose2.pose.orientation.y = rot2[1]
+        pose2.pose.orientation.z = rot2[2]
+        pose2.pose.orientation.w = rot2[3]
+
+        pose1.header = pc2_data.header
+        pose2.header = pc2_data.header
+
+        p1 = geometry.Pose.from_ros_msg(pose1)
+        p2 = geometry.Pose.from_ros_msg(pose2)
+        # TODO:check the transformaiton
+        pose = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(),p1.as_homog_matrix()))
+        t = pose.to_ros_tf()
+        t.header.stamp.secs = pc2_data.header.stamp.secs
+        t.header.stamp.nsecs = pc2_data.header.stamp.nsecs
+        transform_store = ob.TransformationStore.create_from_transforms([t])
+        # pointcloud data to octomap but with same header(for storage purpose)
+        print "convert point cloud to octomap msg"
+        oct_obj = octree.SOMAOctree()
+        FileIO.pc2_to_octree(pc2_data, oct_obj.octree)
+        oct_data = oct_obj.octree.writeBinary()
+        # process octree stream
+        info, data = oct_data.rsplit('\n', 1)
+        oct_msg = Octomap()
+        oct_msg.id = 'OcTree'
+        oct_msg.binary = True  # True for bt file (compact binary version)
+        oct_msg.resolution = 0.01
+        # transform data to int8
+        print "unpack octree data to msg"
+        oct_msg.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
+        oct_msg.header.stamp.secs = pc2_data.header.stamp.secs
+        oct_msg.header.stamp.nsecs = pc2_data.header.stamp.nsecs
+        oct_msg.header.frame_id = '/octomap_topic/frame_id'
+
+        # store tf,pointcloud data,store octomap data (pickled)
+        print "Creating observations..."
+        cloud_observation = ob.Observation.make_observation_from_messages([
+            ("/tf", transform_store.pickle_to_msg()),
+            ("/head_xtion/depth_registered/points", pc2_data),
+            ("/octree_topic", msg_io.pickle_msg_data(oct_msg))])
+        print "tf & point cloud & octomap importing Done."
+        print "\n"*2
+
+        pass
 
 class FileIO(object):
 
@@ -477,44 +585,4 @@ class FileIO(object):
                 print "Did not see ", obj, " this time..."
                 world.get_object(obj).cut(time)
 
-    @staticmethod
-    def online_mode(cloud_data):
-        """
-        The online mode should subscribe a topic which publishes the observation data periodically.
-        These observation data are considered to store in the database, so it shouldn't subscribe
-        to a topic that publishes data constantly.
-        :param cloud_data: the point cloud data to be stored, PointCloud2 type.
-        :return:
-        """
-    	#pointcloud data to octomap but with same header(for storage purpose)
-        print "convert point cloud to octomap msg"
-        oct_obj = octree.SOMAOctree()
-        FileIO.pc2_to_octree(cloud_data, oct_obj.octree)
-        oct_data = oct_obj.octree.writeBinary()
-        ##process octree stream
-        info, data = oct_data.rsplit('\n', 1)
 
-        oct_msg = Octomap()
-        oct_msg.id = 'OcTree'
-        oct_msg.binary = True  # True for bt file (compact binary version)
-        oct_msg.resolution = 0.01
-        # transform data to int8
-        print "unpack octree data to msg"
-        oct_msg.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
-        oct_msg.header.stamp.secs = cloud_data.header.stamp.secs
-        oct_msg.header.stamp.nsecs = cloud_data.header.stamp.nsecs
-        oct_msg.header.frame_id = '/octomap_topic/frame_id'
-        print "Done."
-
-        ##store pointcloud data
-        print "Creating observations..."
-        cloud_observation = ob.Observation.make_observation_from_messages([
-            ("/head_xtion/depth_registered/points", cloud_data)])
-
-        ##store octomap data (pickled)
-        octo_observation = ob.Observation.make_observation_from_messages(
-            [("/octree_topic", msg_io.pickle_msg_data(oct_msg))])
-        print "ok."
-        #tf data and pointcloud data together(transform to global coordinate purpose)
-        #
-        pass
