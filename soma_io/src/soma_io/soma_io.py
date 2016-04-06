@@ -15,9 +15,11 @@ import geometry
 import msg_io
 import octomap
 import octree
+import struct
 import soma_math
 import pcl
 from octomap_msgs.msg import Octomap
+import sensor_msgs.point_cloud2 as pypc2
 from state import World
 
 
@@ -85,8 +87,26 @@ class FileIO(object):
         return
 
     @staticmethod
+    def pc2_to_octree(point_cloud, octree, resolution=0.01, point=Point(0.0, 0.0, 0.0)):
+        """
+        convert ROS sensor_msgs.PointCloud2 msg to Octomap msg
+        :param point_cloud:
+        :param octree:
+        :param resolution:
+        :param point:
+        :return:
+        """
+        if isinstance(point_cloud, PointCloud2):
+            # sensor_msgs.PointCloud2 to array
+            p = []
+            for points in pypc2.read_points(point_cloud, field_names=("x", "y", "z"), skip_nans=True):
+                p.append([points[0], points[1], points[2]])
+            cloud_array = np.asarray(p, dtype=np.float64)
+        sensor_origin = np.array([point.x, point.y, point.z])
+        octree.insertPointCloud(cloud_array, sensor_origin)
+
+    @staticmethod
     def pcd_to_octree(point_cloud, octree, resolution=0.01, point=Point(0.0, 0.0, 0.0)):
-        # TODO: support ros pointcloud2
         """
         :param point_cloud: point cloud to translate
         :type  point_cloud: pcl PointCloud2
@@ -217,17 +237,9 @@ class FileIO(object):
             raise Exception("can't find the given file name in xml, name:", file_name)
         return transform
 
-    def db_octree_bbx(self,):
-        # setup connection to database
-        # prepare the bbx info
-        # write into database
-        # close connection
-        pass
-
     @staticmethod
     def parse_room(world, dirname, files, class_lookup, pickle_octomap_data=True):
         files.sort()
-        #oct_info_collection = World('octree_info')
         if "room.xml" in files:
             with open(os.path.join(dirname, "room.xml"), "r") as f:
                 room = xmltodict.parse(f)
@@ -465,3 +477,44 @@ class FileIO(object):
                 print "Did not see ", obj, " this time..."
                 world.get_object(obj).cut(time)
 
+    @staticmethod
+    def online_mode(cloud_data):
+        """
+        The online mode should subscribe a topic which publishes the observation data periodically.
+        These observation data are considered to store in the database, so it shouldn't subscribe
+        to a topic that publishes data constantly.
+        :param cloud_data: the point cloud data to be stored, PointCloud2 type.
+        :return:
+        """
+    	#pointcloud data to octomap but with same header(for storage purpose)
+        print "convert point cloud to octomap msg"
+        oct_obj = octree.SOMAOctree()
+        FileIO.pc2_to_octree(cloud_data, oct_obj.octree)
+        oct_data = oct_obj.octree.writeBinary()
+        ##process octree stream
+        info, data = oct_data.rsplit('\n', 1)
+
+        oct_msg = Octomap()
+        oct_msg.id = 'OcTree'
+        oct_msg.binary = True  # True for bt file (compact binary version)
+        oct_msg.resolution = 0.01
+        # transform data to int8
+        print "unpack octree data to msg"
+        oct_msg.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
+        oct_msg.header.stamp.secs = cloud_data.header.stamp.secs
+        oct_msg.header.stamp.nsecs = cloud_data.header.stamp.nsecs
+        oct_msg.header.frame_id = '/octomap_topic/frame_id'
+        print "Done."
+
+        ##store pointcloud data
+        print "Creating observations..."
+        cloud_observation = ob.Observation.make_observation_from_messages([
+            ("/head_xtion/depth_registered/points", cloud_data)])
+
+        ##store octomap data (pickled)
+        octo_observation = ob.Observation.make_observation_from_messages(
+            [("/octree_topic", msg_io.pickle_msg_data(oct_msg))])
+        print "ok."
+        #tf data and pointcloud data together(transform to global coordinate purpose)
+        #
+        pass

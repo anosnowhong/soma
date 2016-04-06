@@ -293,7 +293,7 @@ def read_bt(filename, oct_header=None, get_tf=True):
                ("size", int),
                ("res", float)]
 
-    header={}
+    header = {}
     with open(filename, "r") as btfile:
         # Skip the '#' comment
         # miss the line of id but all the id are the same we can add it manually
@@ -318,24 +318,24 @@ def read_bt(filename, oct_header=None, get_tf=True):
         data = btfile.read()
 
     # Create octomap message
-    oct = Octomap()
-    oct.id = 'OcTree'
-    oct.binary = True  # True for bt file (compact binary version)
-    oct.resolution = header["res"]
+    oct_msg = Octomap()
+    oct_msg.id = 'OcTree'
+    oct_msg.binary = True  # True for bt file (compact binary version)
+    oct_msg.resolution = header["res"]
     # transform data to int8
-    oct.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
+    oct_msg.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
 
-    print "octree data list size is "+str(len(oct.data))
+    print "octree data list size is "+str(len(oct_msg.data))
 
     if oct_header is not None:
-        if isinstance(oct_header, oct.header):
-            oct.header = oct_header
+        if isinstance(oct_header, oct_msg.header):
+            oct_msg.header = oct_header
         else:
             raise Exception("Unknown Header type " + type(oct_header))
     else:
-        oct.header.frame_id = "/from_octomap_file"
+        oct_msg.header.frame_id = "/from_octomap_file"
 
-    return oct
+    return oct_msg
 
 
 def pickle_msg(input_msg):
