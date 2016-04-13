@@ -135,7 +135,6 @@ class Importer(object):
         print "tf & point cloud & octomap importing Done."
         print "\n"*2
 
-        pass
 
 class FileIO(object):
 
@@ -147,29 +146,30 @@ class FileIO(object):
 
     @staticmethod
     def load_pcd(path):
-        # TODO: load ply file, for the soma mesh
+        # TODO: This method can load ply file but has not been tested yet.
         """
         load point cloud form pcd file
         @param path: the whole path to the file
         @type  path: string
         @return: the point cloud
-        @rtype: pcl::PointCloud2
+        @rtype: pcl._pcl.PointCloud2
         """
         pc2 = pcl.load(path)
         return pc2
 
     @staticmethod
-    def save_pcd(self, point_cloud, path, _format=False):
+    def save_pcd(point_cloud, path, _format='pcd', _binary=False):
         # TODO: can load ply file, for the soma mesh
         # TODO: should accept multi point_cloud format, currently can only use pcl PointCloud2
-        pcl.save(point_cloud, path, _format)
+        pcl.save(point_cloud, path, _format, _binary)
 
     @staticmethod
-    def remove_nan(cloud_in, cloud_out):
+    def remove_nan(cloud_in, cloud_out, data_type=np.float32):
         """
         remove the nan point in not dense point cloud
         :param cloud_in: input not dense point cloud
         :param cloud_out: output dense point cloud
+        :param data_type: if transform to octree use float64 the pcl format in python module is float32
         :return:
         """
         # If the clouds are not the same, prepare the output
@@ -178,10 +178,11 @@ class FileIO(object):
             # cloud_out.sensor_origin = cloud_in.sensor_origin
             # cloud_out.sensor_orientation = cloud_in.sensor_orientation
             cloud_out.resize(cloud_in.size)
+        else:
+            raise Exception("same input argument detected, need a new point cloud instance")
 
         # if the data is dense, we don't need to check fro nan
         if cloud_in.is_dense is True:
-            # TODO: pycharm remind that its local variable?
             cloud_out = cloud_in
             return
         else:
@@ -218,16 +219,16 @@ class FileIO(object):
         """
         :param point_cloud: point cloud to translate
         :type  point_cloud: pcl PointCloud2
+        :param octree: octomap instance of python Octomap module
         :param resolution: define octree resolution
         :type  resolution: float unit meter
         :param point:   sensor position, also can get form pcl::pointcloud type 'pc.sensor_origin'
-        :type  ros geometry_msgs Point
+        :type  ROS geometry_msgs Point
         :return:  octomap octree
         """
         # Remove nan points, if the cloud is already a dense cloud jump this step
         result = []
-        if not point_cloud.is_dense == True:
-            # cloud_array = np.asarray(point_cloud)#already implemented in python-pcl api
+        if point_cloud.is_dense is False:
             cloud_array = point_cloud.to_array()
             for mem in cloud_array:
                 if not math.isnan(mem[0]):
@@ -238,7 +239,7 @@ class FileIO(object):
 
         # Generate Octree
         #tree = octomap.OcTree(resolution)
-        if not point_cloud.is_dense == True:
+        if point_cloud.is_dense is False:
             ndarray_cloud = cloud_array
         else:
             ndarray_cloud = np.asarray(point_cloud, dtype=np.float64)
@@ -318,9 +319,9 @@ class FileIO(object):
     def get_xml_pose(xml_file, file_name):
         """
         get the pose of specified pcd file
-        :param xml_file:
-        :param file_name:
-        :return:
+        :param xml_file: the name of the xml file (include the whole path to the file)
+        :param file_name: the name of the pcd file
+        :return: a PoseStamped ROS message include rotation and translation info
         """
         with open(xml_file, 'r') as xml:
             room = xmltodict.parse(xml)
@@ -404,8 +405,7 @@ class FileIO(object):
                 """
                 p1 = geometry.Pose.from_ros_msg(transform)
                 p2 = geometry.Pose.from_ros_msg(transform_reg)
-                pose = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(),
-                                                                   p1.as_homog_matrix()))
+                pose = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(), p1.as_homog_matrix()))
                 print "ok."
 
                 """
