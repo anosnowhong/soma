@@ -321,15 +321,17 @@ class FileIO(object):
         get the pose of specified pcd file
         :param xml_file: the name of the xml file (include the whole path to the file)
         :param file_name: the name of the pcd file
-        :return: a PoseStamped ROS message include rotation and translation info
+        :return: a PoseStamped ROS message include rotation and translation info(two transformations)
         """
         with open(xml_file, 'r') as xml:
             room = xmltodict.parse(xml)
 
         transform = None
+        transform_reg = None
         for cloud_info in room['SemanticRoom']['RoomIntermediateClouds']['RoomIntermediateCloud']:
             if str(cloud_info['@filename']) == file_name:
                 transform = cloud_info["RoomIntermediateCloudTransform"]
+                transform_reg = cloud_info["RoomIntermediateCloudTransformRegistered"]
                 transform = PoseStamped(
                     Header(0,
                            genpy.Time(int(transform['Stamp']['sec']),
@@ -342,9 +344,21 @@ class FileIO(object):
                                     float(transform['Transform']['Rotation']['y']),
                                     float(transform['Transform']['Rotation']['z']),
                                     float(transform['Transform']['Rotation']['w']))))
-        if transform is None:
+                transform_reg = PoseStamped(
+                    Header(0,
+                           genpy.Time(int(transform_reg['@Stamp_sec']),
+                                      int(transform_reg['@Stamp_nsec'])),
+                           transform_reg["@FrameId"]),
+                    Pose(Point(float(transform_reg['@Trans_x']),
+                               float(transform_reg['@Trans_y']),
+                               float(transform_reg['@Trans_z'])),
+                         Quaternion(float(transform_reg['@Rot_x']),
+                                    float(transform_reg['@Rot_y']),
+                                    float(transform_reg['@Rot_z']),
+                                    float(transform_reg['@Rot_w']))))
+        if transform is None or transform_reg is None:
             raise Exception("can't find the given file name in xml, name:", file_name)
-        return transform
+        return transform, transform_reg
 
     @staticmethod
     def parse_room(world, dirname, files, class_lookup, pickle_octomap_data=True):

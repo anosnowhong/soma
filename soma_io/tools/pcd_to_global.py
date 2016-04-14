@@ -5,8 +5,9 @@
 import sys
 from soma_io.soma_io import FileIO
 from soma_io import soma_math
+from soma_io import geometry
 import numpy as np
-import copy
+import rospy
 import pcl
 
 if __name__ == '__main__':
@@ -22,6 +23,8 @@ if __name__ == '__main__':
     print "Found ", len(pcd_list), "target files"
     pcd_list.sort()
 
+    rospy.init_node('pcd_transformer')
+
     time = 0
 
     for pcd in pcd_list:
@@ -35,8 +38,10 @@ if __name__ == '__main__':
         if not pcd_file.startswith('intermediate'):
             print "skip."
             continue
-        gl_pose = FileIO.get_xml_pose(xml_file, pcd_file)
-        rot_mat = soma_math.quaternion_to_matrix(gl_pose.pose.orientation)
+        gl_pose, gl_pose_reg = FileIO.get_xml_pose(xml_file, pcd_file)
+        p1 = geometry.Pose.from_ros_msg(gl_pose)
+        p2 = geometry.Pose.from_ros_msg(gl_pose_reg)
+        final_p = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(), p1.as_homog_matrix()))
 
         cloud_data_nan = FileIO.load_pcd(pcd)
         cloud_data = pcl.PointCloud()
@@ -45,20 +50,22 @@ if __name__ == '__main__':
         cloud_array = np.asarray(cloud_data)
 
         # Transformation
-        #cloud_array_new = np.empty([cloud_array.shape[0], cloud_array.shape[1]], dtype=np.float32)
         count = 0
         for p in cloud_array:
+            # Transformation
+            rot_mat = soma_math.quaternion_to_matrix(final_p.quaternion)
             r_point = np.dot(rot_mat, [p[0], p[1], p[2]])
-            r_point[0] += float(gl_pose.pose.position.x)
-            r_point[1] += float(gl_pose.pose.position.y)
-            r_point[2] += float(gl_pose.pose.position.z)
+            r_point[0] += float(final_p.position.x)
+            r_point[1] += float(final_p.position.y)
+            r_point[2] += float(final_p.position.z)
+
             cloud_array[count] = r_point
             count += 1
 
         cloud_save = pcl.PointCloud()
         cloud_save.from_array(cloud_array)
         # Save pcd to current folder
-        save_name = '/home/anokk' + '/transformed' + pcd_file
+        save_name = '/home/anokk/pcd_folder' + '/transformed' + pcd_file
 
         FileIO.save_pcd(cloud_save, save_name)
         time += 1

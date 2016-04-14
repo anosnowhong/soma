@@ -50,9 +50,6 @@ if __name__ == '__main__':
         if args.t is None:
             print "error: need topic name for online mode"
             exit()
-        #rospy.init_node("online_data_importer", anonymous=True)
-        #rospy.Subscriber(args.t, PointCloud2, FileIO.online_mode)
-        #rospy.spin()
         imp = Importer(args.t)
         imp.init_subscriber('/narrow_stereo_link', 'head_pan_link', '/odom_combined')
 
