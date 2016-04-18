@@ -325,7 +325,7 @@ def read_bt(filename, oct_header=None, get_tf=True):
     # transform data to int8
     oct_msg.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
 
-    print "octree data list size is "+str(len(oct_msg.data))
+    #print "octree data list size is "+str(len(oct_msg.data))
 
     if oct_header is not None:
         if isinstance(oct_header, oct_msg.header):

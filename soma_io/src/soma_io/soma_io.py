@@ -494,6 +494,7 @@ class FileIO(object):
 
                 xml_file = os.path.join(dirname, "room.xml")
                 file_name = cloud_info["@filename"]
+                # TODO: registred transformation is not applied.
                 gl_pose = FileIO.get_xml_pose(xml_file, file_name)
                 rot_mat = soma_math.quaternion_to_matrix(gl_pose.pose.orientation)
 
@@ -517,7 +518,6 @@ class FileIO(object):
 
                 print "insert binding box information"
                 print id(room_object)
-                #print room_object.pose
                 room_object.add_bbx(bbx_info_list)
 
             # What objects are "live" in this room at this point in time
