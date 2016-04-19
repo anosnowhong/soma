@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import rospy
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
@@ -5,9 +6,10 @@ from sensor_msgs.msg import PointCloud2
 from octomap_msgs.msg import Octomap
 from soma_io import octree
 from soma_io import soma_io
+from soma_io.soma_io import FileIO
 import sys
 import os, glob
-
+import pcl
 from soma_io import msg_io
 
 """
@@ -58,47 +60,36 @@ def bbx_points(bbx_info):
 def bbx_lines(point_list):
     bbx.points.append(point_list[0])
     bbx.points.append(point_list[1])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[1])
     bbx.points.append(point_list[2])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[2])
     bbx.points.append(point_list[3])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[0])
     bbx.points.append(point_list[3])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[0])
     bbx.points.append(point_list[4])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[1])
     bbx.points.append(point_list[5])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[2])
     bbx.points.append(point_list[6])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[3])
     bbx.points.append(point_list[7])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[4])
     bbx.points.append(point_list[5])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[5])
     bbx.points.append(point_list[6])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[6])
     bbx.points.append(point_list[7])
-    pub.publish(bbx)
 
     bbx.points.append(point_list[4])
     bbx.points.append(point_list[7])
@@ -116,7 +107,7 @@ if __name__ == '__main__':
     pub = rospy.Publisher('bbx', Marker, queue_size=10)
     pub_cloud = rospy.Publisher('cloud', PointCloud2, queue_size=10)
     pub_oct = rospy.Publisher('oct', Octomap, queue_size=10)
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(1)
 
     print 'start publishing topics ...'
     while not rospy.is_shutdown():
@@ -144,23 +135,43 @@ if __name__ == '__main__':
         pub_oct.publish(oct)
 
         # Publish bounding box msg for observations
-        octr = octree.SOMAOctree()
-        octr.load_tree(bt_file)
-        bbx_info = octr.bbx_info
+        #octr = octree.SOMAOctree()
+        #octr.load_tree(bt_file)
+        #bbx_info = octr.bbx_info
+        #bbx_vertices = bbx_points(bbx_info)
+        #bbx_lines(bbx_vertices)
+
+        cloud_in = pcl.load(cloud_file)
+        pmin, pmax = FileIO.find_bbx(cloud_in)
+        bbx_info = {'min': [pmin.x, pmin.y, pmin.z],
+                    'max': [pmax.x, pmax.y, pmax.z]}
         bbx_vertices = bbx_points(bbx_info)
         bbx_lines(bbx_vertices)
 
         # Publish bounding box msg for segmented objects
+        #rubbish, n_file = bt_file.rsplit('/', 1)
+        #num = soma_io.get_number(n_file)
+        #folder_dir, rubbish = bt_file.rsplit('/', 1)
+        #pattern = 'rgb_' + str(num) + '_label_*.bt'
+        #owd = os.getcwd()
+        #os.chdir(folder_dir)
+        #for btfile in glob.glob(pattern):
+        #    octr = octree.SOMAOctree()
+        #    octr.load_tree(btfile)
+        #    bbx_info = octr.bbx_info
+        #    bbx_vertices = bbx_points(bbx_info)
+        #    bbx_lines(bbx_vertices)
         rubbish, n_file = bt_file.rsplit('/', 1)
         num = soma_io.get_number(n_file)
         folder_dir, rubbish = bt_file.rsplit('/', 1)
-        pattern = 'rgb_' + str(num) + '_label_*.bt'
+        pattern = 'rgb_' + str(num) + '_label_*.pcd'
         owd = os.getcwd()
         os.chdir(folder_dir)
-        for btfile in glob.glob(pattern):
-            octr = octree.SOMAOctree()
-            octr.load_tree(btfile)
-            bbx_info = octr.bbx_info
+        for pcdfile in glob.glob(pattern):
+            cloud_in = pcl.load(pcdfile)
+            pmin, pmax = FileIO.find_bbx(cloud_in)
+            bbx_info = {'min': [pmin.x, pmin.y, pmin.z],
+                        'max': [pmax.x, pmax.y, pmax.z]}
             bbx_vertices = bbx_points(bbx_info)
             bbx_lines(bbx_vertices)
 

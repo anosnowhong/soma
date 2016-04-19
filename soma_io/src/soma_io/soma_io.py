@@ -145,6 +145,44 @@ class FileIO(object):
         pass
 
     @staticmethod
+    def find_bbx(cloud_in):
+        """
+        The bbx method by octree include the spare space, the method get the real-bbx as you can see
+        :param cloud_in: pcl PointCloud instance
+        :return:
+        """
+        pmin = Point()
+        pmax = Point()
+        if isinstance(cloud_in, pcl.PointCloud):
+            #init pmin and pmax using a valid point
+            for pp in cloud_in:
+                if not math.isnan(pp[0]) and not math.isnan(pp[1]) and not math.isnan(pp[2]):
+                    pmin.x = pp[0]
+                    pmin.y = pp[1]
+                    pmin.z = pp[2]
+                    pmax.z = pmin.z
+                    pmax.y = pmin.y
+                    pmax.x = pmin.x
+                    break
+
+            for pp in cloud_in:
+                if not math.isnan(pp[0]) and not math.isnan(pp[1]) and not math.isnan(pp[2]):
+                    if pp[0] < pmin.x:
+                        pmin.x = pp[0]
+                    if pp[1] < pmin.y:
+                        pmin.y = pp[1]
+                    if pp[2] < pmin.z:
+                        pmin.z = pp[2]
+                    if pp[0] > pmax.x:
+                        pmax.x = pp[0]
+                    if pp[1] > pmax.y:
+                        pmax.y = pp[1]
+                    if pp[2] > pmax.z:
+                        pmax.z = pp[2]
+        else:
+            raise Exception("unexpected input parameter")
+        return pmin, pmax
+    @staticmethod
     def load_pcd(path):
         # TODO: This method can load ply file but has not been tested yet.
         """

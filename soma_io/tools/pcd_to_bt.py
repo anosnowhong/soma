@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 from soma_io.soma_io import FileIO
+from soma_io.octree import SOMAOctree
 import octomap
 
 
@@ -21,12 +22,14 @@ if __name__ == '__main__':
         # convert pcd to octree
         print "Start converting " + pcd
 
-        octree = octomap.OcTree(0.01)
-        FileIO.pcd_to_octree(pc2, octree)
+        octree = SOMAOctree()
+        #octree = octomap.OcTree(0.01)
+        FileIO.pcd_to_octree(pc2, octree.octree)
         # save octree to bt format
         for i in range(len(pcd)):
             x = len(pcd) - (i + 1)
             if pcd[x] == '.':
                 bt_name = pcd[:x] + ".bt"
-                FileIO.save_oct(bt_name, octree)
+                #FileIO.save_oct(bt_name, octree)
+                octree.save_tree(bt_name)
                 break
