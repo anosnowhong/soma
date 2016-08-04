@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   std_msgs
 )
+set(Qt5Core_DIR "/opt/Qt/5.7/gcc_64/lib/cmake/Qt5Core")
 find_package(Qt5Core)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

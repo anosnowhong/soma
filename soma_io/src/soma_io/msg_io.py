@@ -3,7 +3,7 @@ from geometry_msgs.msg import Transform
 from octomap_msgs.msg import Octomap
 from mongodb_store.message_store import MessageStoreProxy
 from mongodb_store_msgs.msg import SerialisedMessage
-from soma_msgs.msg import PickledOctomap
+#from soma_msgs.msg import PickledOctomap
 
 
 import sensor_msgs.point_cloud2 as pc2
@@ -358,15 +358,16 @@ def pickle_msg_data(input_msg):
 
     if isinstance(input_msg, Octomap):
         # Convert to PickledOctomap.msg (only change the data field)
-        pickled_oct = PickledOctomap()
+        #pickled_oct = PickledOctomap()
 
-        pickled_oct.binary = input_msg.binary
-        pickled_oct.header = input_msg.header
-        pickled_oct.id = input_msg.id
-        pickled_oct.resolution = input_msg.resolution
-        pickled_oct.pickled_data = zlib.compress(pickle.dumps(input_msg.data, protocol=pickle.HIGHEST_PROTOCOL))
+        #pickled_oct.binary = input_msg.binary
+        #pickled_oct.header = input_msg.header
+        #pickled_oct.id = input_msg.id
+        #pickled_oct.resolution = input_msg.resolution
+        #pickled_oct.pickled_data = zlib.compress(pickle.dumps(input_msg.data, protocol=pickle.HIGHEST_PROTOCOL))
 
-        return pickled_oct
+        #return pickled_oct
+        pass
     else:
         raise Exception("input message object illegal, only support Octomap.msg and PointCloud2.msg")
 
