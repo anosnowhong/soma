@@ -3,3 +3,6 @@
 *BAK
 *.blend[12]
 
+.idea/*
+*.swp
+*.swp
