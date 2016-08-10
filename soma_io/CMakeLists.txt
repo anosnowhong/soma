@@ -181,8 +181,8 @@ include_directories(
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
-catkin_install_python(PROGRAMS bin/pcd_to_bt
-DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+#catkin_install_python(PROGRAMS bin/pcd_to_bt
+#DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #############
 ## Testing ##

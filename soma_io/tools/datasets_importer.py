@@ -54,7 +54,9 @@ if __name__ == '__main__':
         #rospy.Subscriber(args.t, PointCloud2, FileIO.online_mode)
         #rospy.spin()
         imp = Importer(args.t)
-        imp.init_subscriber('/narrow_stereo_link', 'head_pan_link', '/odom_combined')
+        #optical frame is diff from xtion_base_frame which is upside down
+        #head_xtion_optical frame is not stable in morse simulator
+        imp.init_subscriber('/base_link', '/head_xtion_depth_optical_frame','/map')
 
     else:
          print("Unknown options detected, use -h for usage info")
