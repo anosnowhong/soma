@@ -51,6 +51,7 @@ add_message_files(
    SOMA2Object.msg
    SOMA2ROIObject.msg
    SOMA2OccupancyMap.msg
+   PickledOctomap.msg
 )
 
 ## Generate services in the 'srv' folder

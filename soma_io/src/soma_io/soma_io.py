@@ -106,6 +106,8 @@ class Importer(object):
         t.header.stamp.secs = pc2_data.header.stamp.secs
         t.header.stamp.nsecs = pc2_data.header.stamp.nsecs
         transform_store = ob.TransformationStore.create_from_transforms([t])
+
+        """
         # pointcloud data to octomap but with same header(for storage purpose)
         print "convert point cloud to octomap msg"
         oct_obj = octree.SOMAOctree()
@@ -122,14 +124,17 @@ class Importer(object):
         oct_msg.data = struct.unpack(str(len(data))+'b', data[0:len(data)])
         oct_msg.header.stamp.secs = pc2_data.header.stamp.secs
         oct_msg.header.stamp.nsecs = pc2_data.header.stamp.nsecs
-        oct_msg.header.frame_id = '/octomap_topic/frame_id'
+        #should be the same as pointcloud, as they are just different representation
+        oct_msg.header.frame_id = pc2_data.header.frame_id
+        """
 
         # store tf,pointcloud data,store octomap data (pickled)
         print "Creating observations..."
         cloud_observation = ob.Observation.make_observation_from_messages([
             ("/tf", transform_store.pickle_to_msg()),
-            ("/head_xtion/depth_registered/points", pc2_data),
-            ("/octree_topic", msg_io.pickle_msg_data(oct_msg))])
+            ("/head_xtion/depth_registered/points", pc2_data)
+            ])
+            #("/octree_topic", msg_io.pickle_msg_data(oct_msg))])
         print "tf & point cloud & octomap importing Done."
         print "\n"*2
 
