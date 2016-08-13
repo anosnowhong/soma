@@ -105,7 +105,8 @@ class Importer(object):
         t = pose.to_ros_tf()
         t.header.stamp.secs = pc2_data.header.stamp.secs
         t.header.stamp.nsecs = pc2_data.header.stamp.nsecs
-        transform_store = ob.TransformationStore.create_from_transforms([t])
+        #transform_store = ob.TransformationStore.create_from_transforms([t])
+        transform_store = t;
 
         """
         # pointcloud data to octomap but with same header(for storage purpose)
@@ -131,7 +132,8 @@ class Importer(object):
         # store tf,pointcloud data,store octomap data (pickled)
         print "Creating observations..."
         cloud_observation = ob.Observation.make_observation_from_messages([
-            ("/tf", transform_store.pickle_to_msg()),
+            #("/tf", transform_store.pickle_to_msg()),
+            ("/tf", transform_store),
             ("/head_xtion/depth_registered/points", pc2_data)
             ])
             #("/octree_topic", msg_io.pickle_msg_data(oct_msg))])
