@@ -77,8 +77,10 @@ class Importer(object):
             print "***extrapolation problem..."
             return
 
+        print trans1
+        print rot1
         # reconstruct a single tf message for the two frames
-        pose1 = pose2 = PoseStamped()
+        pose1, pose2 = PoseStamped(), PoseStamped()
         pose1.pose.position.x = trans1[0]
         pose1.pose.position.y = trans1[1]
         pose1.pose.position.z = trans1[2]
@@ -100,9 +102,12 @@ class Importer(object):
 
         p1 = geometry.Pose.from_ros_msg(pose1)
         p2 = geometry.Pose.from_ros_msg(pose2)
-        # TODO:check the transformaiton
+        print p1.as_homog_matrix()
+        print p2.as_homog_matrix()
         pose = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(),p1.as_homog_matrix()))
+        print pose.as_homog_matrix()
         t = pose.to_ros_tf()
+        print t
         t.header.stamp.secs = pc2_data.header.stamp.secs
         t.header.stamp.nsecs = pc2_data.header.stamp.nsecs
         #transform_store = ob.TransformationStore.create_from_transforms([t])
