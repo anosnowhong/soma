@@ -77,8 +77,6 @@ class Importer(object):
             print "***extrapolation problem..."
             return
 
-        print trans1
-        print rot1
         # reconstruct a single tf message for the two frames
         pose1, pose2 = PoseStamped(), PoseStamped()
         pose1.pose.position.x = trans1[0]
@@ -102,16 +100,12 @@ class Importer(object):
 
         p1 = geometry.Pose.from_ros_msg(pose1)
         p2 = geometry.Pose.from_ros_msg(pose2)
-        print p1.as_homog_matrix()
-        print p2.as_homog_matrix()
         pose = geometry.Pose.from_homog(np.dot(p2.as_homog_matrix(),p1.as_homog_matrix()))
-        print pose.as_homog_matrix()
         t = pose.to_ros_tf()
-        print t
         t.header.stamp.secs = pc2_data.header.stamp.secs
         t.header.stamp.nsecs = pc2_data.header.stamp.nsecs
         #transform_store = ob.TransformationStore.create_from_transforms([t])
-        transform_store = t;
+        transform_store = t
 
         """
         # pointcloud data to octomap but with same header(for storage purpose)
@@ -145,7 +139,6 @@ class Importer(object):
         print "tf & point cloud & octomap importing Done."
         print "\n"*2
 
-        pass
 
 class FileIO(object):
 
