@@ -37,6 +37,7 @@ class Importer(object):
         self.tf_listener = tf.TransformListener()
         self.frame_robot= self.frame_sensor= None
         self.frame_global = None
+        self.tf_mode = False
 
     def init_subscriber(self, frame_1, frame_2, frame_3):
         """
@@ -60,22 +61,43 @@ class Importer(object):
         :param pc2_data: the point cloud data to be stored, PointCloud2 type.
         :return:
         """
-        try:
-            # Transformation from sensor to robot
-            trans1, rot1 = self.tf_listener.lookupTransform(self.frame_robot, self.frame_sensor,
+        # TODO: store the latest tf info, which is not good if some other program that want a real time tf data.
+
+        if self.tf_mode is False:
+            try:
+                # Transformation from sensor to robot
+                trans1, rot1 = self.tf_listener.lookupTransform(self.frame_robot, self.frame_sensor,
                                                             rospy.Time(0))
-            # Transformation from robot to global frame
-            trans2, rot2 = self.tf_listener.lookupTransform(self.frame_global, self.frame_robot,
+                # Transformation from robot to global frame
+                trans2, rot2 = self.tf_listener.lookupTransform(self.frame_global, self.frame_robot,
                                                             rospy.Time(0))
-        except tf.ConnectivityException:
-            print "***connection problem occurs..."
-            return
-        except tf.LookupException:
-            print "***encounter problem when look up transformaion in tf tree..."
-            return
-        except tf.ExtrapolationException:
-            print "***extrapolation problem..."
-            return
+            except tf.ConnectivityException:
+                print "***connection problem occurs..."
+                return
+            except tf.LookupException:
+                print "***encounter problem when look up transformaion in tf tree..."
+                return
+            except tf.ExtrapolationException:
+                print "***extrapolation problem..."
+                return
+
+        else:
+            try:
+                # Transformation from sensor to robot
+                trans1, rot1 = self.tf_listener.lookupTransform(self.frame_robot, self.frame_sensor,
+                                                    rospy.Time(0))
+                # Transformation from robot to global frame
+                trans2, rot2 = self.tf_listener.lookupTransform(self.frame_global, self.frame_robot,
+                                                    rospy.Time(0))
+            except tf.ConnectivityException:
+                print "***connection problem occurs..."
+                return
+            except tf.LookupException:
+                print "***encounter problem when look up transformaion in tf tree..."
+                return
+            except tf.ExtrapolationException:
+                print "***extrapolation problem..."
+                return
 
         # reconstruct a single tf message for the two frames
         pose1, pose2 = PoseStamped(), PoseStamped()
