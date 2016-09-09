@@ -35,7 +35,8 @@ class Importer(object):
         # need specify the point cloud topic to run the importer
         self.pc2_topic = pc2_topic
         self.tf_listener = tf.TransformListener()
-        self.frame_robot= self.frame_sensor= None
+        self.frame_robot= None
+        self.frame_sensor= None
         self.frame_global = None
         self.tf_mode = False
 
