@@ -86,10 +86,12 @@ class Importer(object):
             try:
                 # Transformation from sensor to robot
                 trans1, rot1 = self.tf_listener.lookupTransform(self.frame_robot, self.frame_sensor,
-                                                    rospy.Time(0))
+                                                                rospy.Time(pc2_data.header.stamp.secs,
+ -                                                                       pc2_data.header.stamp.nsecs))
                 # Transformation from robot to global frame
                 trans2, rot2 = self.tf_listener.lookupTransform(self.frame_global, self.frame_robot,
-                                                    rospy.Time(0))
+                                                                rospy.Time(pc2_data.header.stamp.secs,
+ -                                                                       pc2_data.header.stamp.nsecs))
             except tf.ConnectivityException:
                 print "***connection problem occurs..."
                 return
